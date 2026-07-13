@@ -285,6 +285,18 @@
   body.privacy :is(.rs-value, .reco-why, .reco-compare, .reco-verdict):hover { filter: none; }
   @media (max-width: 640px) { .reco-compare { grid-template-columns: 1fr; } }
 
+  /* ---------- Reverse goal ---------- */
+  .goal-answer {
+    margin-top: 12px; padding: 16px 18px; border-radius: 10px;
+    background: var(--accent-soft); color: var(--accent);
+  }
+  .goal-answer .ga-big { font-size: 1.5rem; font-weight: 800; }
+  .goal-answer .ga-sub { color: var(--text); font-size: 0.92rem; margin-top: 6px; }
+  .goal-answer.danger { background: var(--danger-soft); color: var(--danger); }
+  .goal-answer.ok { background: var(--ok-soft); color: var(--ok); }
+  body.privacy .goal-answer { filter: blur(7px); }
+  body.privacy .goal-answer:hover { filter: none; }
+
   .payoff-order { margin-top: 6px; }
   .payoff-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--border); }
   .payoff-row:first-child { border-top: none; }
@@ -630,6 +642,26 @@
   .sub-badge.soon { background: var(--danger-soft); color: var(--danger); }
   body.privacy :is(.sub-amount, .sub-annual, .sub-detail) { filter: blur(7px); }
   body.privacy :is(.sub-amount, .sub-annual, .sub-detail):hover { filter: none; }
+
+  /* ---------- Printable summary ---------- */
+  #print-area { display: none; }
+  #print-area h1 { font-size: 20px; margin-bottom: 2px; }
+  #print-area .p-sub { color: #555; font-size: 12px; margin-bottom: 14px; }
+  #print-area h2 { font-size: 14px; margin: 16px 0 6px; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
+  #print-area table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 8px; }
+  #print-area th, #print-area td { text-align: left; padding: 5px 7px; border-bottom: 1px solid #e0e0e0; }
+  #print-area th { background: #f0f0f0; }
+  #print-area td.num, #print-area th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  #print-area .p-totals { display: flex; flex-wrap: wrap; gap: 20px; font-size: 12px; margin: 6px 0; }
+  #print-area .p-totals b { display: block; font-size: 15px; }
+  #print-area .p-foot { margin-top: 18px; font-size: 10px; color: #888; }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    body > *:not(#print-area) { display: none !important; }
+    #print-area { display: block !important; color: #000; padding: 10px 4px; }
+    @page { margin: 14mm; }
+  }
 </style>
 </head>
 <body>
@@ -638,6 +670,7 @@
   <h1>💳 CCB<span>Gone</span></h1>
   <div class="header-actions">
     <button class="btn-quiet" id="btn-help" aria-label="Help" title="How everything works, in plain words">❓ <span class="bl">Help</span></button>
+    <button class="btn-quiet" id="btn-print" aria-label="Print or save a summary" title="Print or save a one-page summary as a PDF">📄 <span class="bl">Summary</span></button>
     <button class="btn-quiet" id="btn-theme" aria-label="Change theme" title="Switch between automatic, light, and dark theme">🌓</button>
     <button class="btn-quiet" id="btn-privacy" aria-label="Hide dollar amounts" title="Blur all dollar amounts (for when someone's looking over your shoulder)">👁</button>
     <button class="btn-quiet" id="btn-calendar" aria-label="Export calendar reminders" title="Download due-date reminders you can add to your phone or computer calendar">📅 <span class="bl">Calendar</span></button>
@@ -782,6 +815,18 @@
     <p class="panel-sub">Your plan vs. paying only the minimums.</p>
     <div id="plan-chart"></div>
   </div>
+
+  <div class="panel" id="goal-panel" hidden>
+    <h3>🏁 Work backwards from a finish date</h3>
+    <p class="panel-sub">Have a deadline in mind — a wedding, a mortgage application, just being done? Pick the month you want to be debt-free and see what it takes each month.</p>
+    <div class="planner-controls">
+      <div class="form-field">
+        <label for="goal-date">I want to be debt-free by</label>
+        <input id="goal-date" type="month">
+      </div>
+    </div>
+    <div id="goal-result"></div>
+  </div>
 </section>
 
 <!-- ================= TRENDS ================= -->
@@ -901,7 +946,7 @@
         </div>
         <div class="form-field">
           <label for="f-last4">Last 4 digits</label>
-          <input id="f-last4" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="1234">
+          <input id="f-last4" inputmode="numeric" maxlength="4" placeholder="1234">
           <span class="field-hint">Optional — just to tell cards apart</span>
         </div>
         <div class="form-field">
@@ -1052,6 +1097,8 @@
 </div>
 
 <div id="toast"></div>
+
+<div id="print-area" aria-hidden="true"></div>
 
 <script>
 "use strict";
@@ -1915,8 +1962,72 @@ function renderRecommendation() {
   };
 }
 
+/* =====================================================
+   Reverse goal: target finish date -> required monthly payment
+   ===================================================== */
+function requiredBudgetForMonths(targetMonths, strategy) {
+  const debt = state.cards.filter((c) => c.balance > 0);
+  if (!debt.length) return null;
+  const totalMins = debt.reduce((s, c) => s + Math.min(c.minPayment, c.balance), 0);
+  const totalDebt = debt.reduce((s, c) => s + c.balance, 0);
+  const finishesBy = (b) => { const r = simulate(b, strategy); return r.done && r.months <= targetMonths; };
+  const hi0 = totalDebt * 1.6 + totalMins + 200;
+  if (!finishesBy(hi0)) {
+    return { impossible: true, soonestMonths: simulate(hi0, strategy).months };
+  }
+  let lo = Math.max(totalMins, 1);
+  if (finishesBy(lo)) return { budget: Math.ceil(lo), easy: true };
+  let hi = hi0;
+  for (let i = 0; i < 44; i++) { const mid = (lo + hi) / 2; if (finishesBy(mid)) hi = mid; else lo = mid; }
+  return { budget: Math.ceil(hi) };
+}
+
+function renderGoal() {
+  const panel = $("goal-panel");
+  const debt = state.cards.filter((c) => c.balance > 0);
+  if (debt.length === 0) { panel.hidden = true; return; }
+  panel.hidden = false;
+  const res = $("goal-result");
+  const val = $("goal-date").value;
+  if (!val) { res.innerHTML = '<p class="field-hint" style="margin-top:8px">Pick a month above and I\'ll tell you the monthly payment that hits it.</p>'; return; }
+  const [y, m] = val.split("-").map(Number);
+  const now = new Date();
+  const targetMonths = (y - now.getFullYear()) * 12 + (m - (now.getMonth() + 1));
+  if (isNaN(targetMonths) || targetMonths < 1) {
+    res.innerHTML = '<div class="goal-answer danger"><div class="ga-big">Pick a future month</div><div class="ga-sub">That month is now or already past.</div></div>';
+    return;
+  }
+  const strategy = state.settings.strategy;
+  const r = requiredBudgetForMonths(targetMonths, strategy);
+  if (!r) { res.innerHTML = ""; return; }
+  const targetLabel = new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  if (r.impossible) {
+    res.innerHTML = '<div class="goal-answer danger"><div class="ga-big">That\'s faster than possible</div>' +
+      '<div class="ga-sub">Even putting every spare dollar toward it, the soonest you can be debt-free is about ' + r.soonestMonths + ' months from now. Try a later month.</div></div>';
+    return;
+  }
+  const totalMins = debt.reduce((s, c) => s + Math.min(c.minPayment, c.balance), 0);
+  const curBudget = state.settings.budget;
+  let extra = "";
+  if (curBudget > 0) {
+    const diff = r.budget - curBudget;
+    if (diff > 1) extra = "That's " + fmtMoney(diff) + "/mo more than your current plan of " + fmtMoney(curBudget) + ".";
+    else extra = "Your current plan of " + fmtMoney(curBudget) + "/mo already gets you there. 🎉";
+  }
+  const cls = (curBudget > 0 && r.budget <= curBudget + 1) ? "ok" : "";
+  res.innerHTML = '<div class="goal-answer ' + cls + '">' +
+    "<div>To be debt-free by <b>" + escapeHTML(targetLabel) + "</b> you'd pay about</div>" +
+    '<div class="ga-big">' + fmtMoney(r.budget) + " / month</div>" +
+    '<div class="ga-sub">' + (r.easy
+      ? "Even your minimums (" + fmtMoney(totalMins) + ") get you there by then — you're on track."
+      : "Using the " + (strategy === "avalanche" ? "Avalanche" : "Snowball") + " order. " + extra) + "</div></div>";
+}
+
+$("goal-date").addEventListener("input", renderGoal);
+
 function renderPlanner() {
   renderRecommendation();
+  renderGoal();
   const debtCards = state.cards.filter((c) => c.balance > 0);
   const totalMins = debtCards.reduce((s, c) => s + Math.max(Math.min(c.minPayment, c.balance), 0), 0);
   const budgetInput = $("plan-budget");
@@ -3079,17 +3190,85 @@ $("btn-calendar").onclick = () => {
 };
 
 /* =====================================================
+   Printable / PDF one-page summary
+   ===================================================== */
+function buildPrintSummary() {
+  const area = $("print-area");
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
+  const totalBal = state.cards.reduce((s, c) => s + c.balance, 0);
+  const totalLimit = state.cards.reduce((s, c) => s + c.limit, 0);
+  const util = totalLimit ? (totalBal / totalLimit) * 100 : 0;
+  const owing = state.cards.filter((c) => !cardStatus(c).handled);
+  const minDue = owing.reduce((s, c) => s + (Math.min(c.minPayment, c.balance) || c.minPayment), 0);
+  const interest = state.cards.reduce((s, c) => s + monthlyInterest(c), 0);
+
+  const rows = state.cards.map((c) => {
+    const st = cardStatus(c);
+    const due = st.level === "autopay" ? "Autopay" : st.level === "zero" ? "—"
+      : st.due.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return "<tr><td>" + escapeHTML(c.name) + (c.last4 ? " ••" + escapeHTML(c.last4) : "") + "</td>" +
+      '<td class="num">' + fmtMoney(c.balance) + '</td><td class="num">' + fmtMoney(c.limit) + "</td>" +
+      '<td class="num">' + effectiveApr(c).toFixed(2) + '%</td><td class="num">' + fmtMoney(c.minPayment) + "</td>" +
+      "<td>" + due + "</td></tr>";
+  }).join("");
+
+  let html = "<h1>💳 CCBGone — your money summary</h1>";
+  html += '<div class="p-sub">' + (state.demo ? "SAMPLE DATA · " : "") + dateStr + "</div>";
+  html += '<div class="p-totals">' +
+    "<div>Total debt<b>" + fmtMoney(totalBal) + "</b></div>" +
+    "<div>Utilization<b>" + util.toFixed(0) + "%</b></div>" +
+    "<div>Minimums due<b>" + fmtMoney(minDue) + "</b></div>" +
+    "<div>Interest / mo<b>" + fmtMoney(interest) + "</b></div></div>";
+  html += "<h2>Cards</h2><table><thead><tr><th>Card</th><th class=\"num\">Balance</th><th class=\"num\">Limit</th><th class=\"num\">APR</th><th class=\"num\">Min</th><th>Next due</th></tr></thead><tbody>" + rows + "</tbody></table>";
+
+  const debt = state.cards.filter((c) => c.balance > 0);
+  if (debt.length && state.settings.budget > 0) {
+    const totalMins = debt.reduce((s, c) => s + Math.min(c.minPayment, c.balance), 0);
+    const plan = simulate(Math.max(state.settings.budget, totalMins), state.settings.strategy);
+    if (plan.done) {
+      html += '<h2>Payoff plan</h2><div class="p-totals">' +
+        "<div>Paying<b>" + fmtMoney(state.settings.budget) + "/mo</b></div>" +
+        "<div>Method<b>" + (state.settings.strategy === "avalanche" ? "Avalanche" : "Snowball") + "</b></div>" +
+        "<div>Debt-free<b>" + fmtMonthYear(monthToDate(plan.months)) + "</b></div>" +
+        "<div>Total interest<b>" + fmtMoney(plan.totalInterest) + "</b></div></div>";
+    }
+  }
+
+  const subs = detectSubscriptions().filter((s) => !s.ignored);
+  if (subs.length) {
+    const monthly = subs.reduce((s, x) => s + x.annual / 12, 0);
+    html += "<h2>Recurring charges (" + subs.length + " found · " + fmtMoney(monthly) + "/mo · " + fmtMoney(monthly * 12) + "/yr)</h2>";
+    html += '<table><thead><tr><th>Charge</th><th>Every</th><th class="num">Amount</th><th class="num">Per year</th></tr></thead><tbody>' +
+      subs.slice(0, 20).map((s) => "<tr><td>" + escapeHTML(s.name) + "</td><td>" + s.cadence + '</td><td class="num">' + fmtMoney(s.amount) + '</td><td class="num">' + fmtMoney(s.annual) + "</td></tr>").join("") +
+      "</tbody></table>";
+  }
+
+  html += '<div class="p-foot">Generated by CCBGone on ' + dateStr + ". Figures reflect what you entered/imported — always verify against your real statements.</div>";
+  area.innerHTML = html;
+}
+
+$("btn-print").onclick = () => {
+  if (state.cards.length === 0) { toast("Add a card first, then you can print a summary"); return; }
+  buildPrintSummary();
+  window.print();
+};
+
+/* =====================================================
    Backup / restore
    ===================================================== */
 $("btn-export").onclick = () => {
+  // Record the backup date BEFORE serializing, so the saved file itself
+  // reflects that it was backed up today.
+  state.settings.lastBackup = todayISO();
+  saveState();
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "ccbgone-backup-" + todayISO() + ".json";
   a.click();
   URL.revokeObjectURL(a.href);
-  state.settings.lastBackup = todayISO();
-  saveState();
   renderTip();
   toast("Backup saved to your Downloads folder");
 };

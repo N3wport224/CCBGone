@@ -101,6 +101,11 @@ pay**, how much you **save vs. paying minimums only** (often the answer is
 of your plan vs. the minimums-only slog. The simulation respects 0% intro APR
 periods and their end dates.
 
+**Have a deadline instead of a budget?** The **🏁 Work backwards from a finish
+date** tool flips the question around: pick the month you want to be debt-free
+(a wedding, a mortgage application, or just *done*) and it tells you the monthly
+payment that gets you there — and whether your current plan already makes it.
+
 ### 📈 Trends — is it working?
 
 A chart of your total balance over time, built automatically from what you log,
@@ -142,6 +147,10 @@ Your calendar does the remembering. Re-export whenever you add or change cards.
 
 ## Little conveniences
 
+- **📄 Summary button** — builds a clean one-page summary of everything (cards,
+  totals, payoff plan, subscriptions) and opens your print dialog, where you can
+  print it or **Save as PDF**. Good for the fridge, or for handing to a partner
+  or financial advisor.
 - **🌓 Theme button** — auto (follows your system), light, or dark.
 - **👁 Privacy button** — blurs every dollar amount on screen for when someone
   is looking over your shoulder. Hover an amount to peek; tap 👁 again to show.
