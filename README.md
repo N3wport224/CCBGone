@@ -43,9 +43,19 @@ a shrinking chart).
   and each card tells you exactly how much to pay to get there), minimum
   payments still due, estimated interest cost per month, and your **🔥 on-time
   streak**.
-- **Recent activity** logs every payment and balance update. Deleting a card
-  offers **Undo** for a few seconds, so a slip of the finger costs nothing.
+- **The plan follows you here.** Once you've set a budget on the Payoff Plan
+  tab, each card shows *"Plan says $X/mo"*, the banner tells you the planned
+  amount (not just the minimum), and the payment form comes prefilled with it.
+  Zero monthly decision-making.
+- **Debt paydown progress bar** — how far you've come from your peak debt,
+  with celebrations when you cross 25%, 50%, 75%, and 100% paid off.
+- **＋ Charge** lets you log new spending in two taps, so balances (and the
+  Trends chart) stay honest between statements.
+- **Recent activity** logs every payment, charge, and balance update, and can
+  be **exported as CSV** for spreadsheets. Deleting a card offers **Undo** for
+  a few seconds, so a slip of the finger costs nothing.
 - Pay everything due this week and you get confetti. You earned it.
+  (Respects your system's reduced-motion setting.)
 
 ### 🎯 Payoff Plan — how do I get out of debt?
 
@@ -80,6 +90,12 @@ adds:
 - a **one-time warning** two weeks before a 0% intro APR expires.
 
 Your calendar does the remembering. Re-export whenever you add or change cards.
+
+## Little conveniences
+
+- **🌓 Theme button** — auto (follows your system), light, or dark.
+- **👁 Privacy button** — blurs every dollar amount on screen for when someone
+  is looking over your shoulder. Hover an amount to peek; tap 👁 again to show.
 
 ## The monthly routine (about 2 minutes)
 
