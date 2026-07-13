@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CCBGone — Credit Card Tracker</title>
+<style>
+  :root {
+    --bg: #f4f6fa;
+    --card-bg: #ffffff;
+    --text: #1a2233;
+    --text-soft: #5b6577;
+    --accent: #3556d4;
+    --accent-soft: #e8edfb;
+    --danger: #d43535;
+    --danger-soft: #fdeaea;
+    --warn: #c97a06;
+    --warn-soft: #fdf3e0;
+    --ok: #1d8a4e;
+    --ok-soft: #e3f5ea;
+    --border: #dde3ee;
+    --radius: 14px;
+    --shadow: 0 2px 10px rgba(20, 32, 66, 0.07);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding-bottom: 80px;
+  }
+  header {
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  header h1 { font-size: 1.25rem; }
+  header h1 span { color: var(--accent); }
+  .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  main { max-width: 980px; margin: 0 auto; padding: 20px; }
+
+  /* ---------- Buttons ---------- */
+  button {
+    font: inherit;
+    border: none;
+    border-radius: 10px;
+    padding: 9px 16px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: filter 0.15s, transform 0.05s;
+  }
+  button:active { transform: scale(0.98); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-ghost { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+  .btn-ghost:hover { background: var(--accent-soft); }
+  .btn-quiet { background: transparent; color: var(--text-soft); padding: 6px 10px; }
+  .btn-quiet:hover { background: var(--border); color: var(--text); }
+  .btn-danger { background: transparent; color: var(--danger); border: 1.5px solid var(--danger); }
+  .btn-danger:hover { background: var(--danger-soft); }
+  .btn-ok { background: var(--ok); color: #fff; }
+  .btn-ok:hover { filter: brightness(1.08); }
+  .btn-big { font-size: 1.05rem; padding: 12px 22px; }
+
+  /* ---------- Focus banner (the ADHD "what do I do next" answer) ---------- */
+  #focus-banner {
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  #focus-banner.calm { background: var(--ok-soft); border: 1.5px solid var(--ok); }
+  #focus-banner.soon { background: var(--warn-soft); border: 1.5px solid var(--warn); }
+  #focus-banner.urgent { background: var(--danger-soft); border: 1.5px solid var(--danger); }
+  #focus-banner .focus-title { font-size: 1.15rem; font-weight: 700; }
+  #focus-banner .focus-sub { color: var(--text-soft); margin-top: 2px; }
+
+  /* ---------- Summary stats ---------- */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .stat {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 16px 18px;
+  }
+  .stat .label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-soft); font-weight: 600; }
+  .stat .value { font-size: 1.5rem; font-weight: 700; margin-top: 4px; }
+  .stat .hint { font-size: 0.82rem; color: var(--text-soft); margin-top: 2px; }
+  .stat .value.good { color: var(--ok); }
+  .stat .value.warn { color: var(--warn); }
+  .stat .value.bad { color: var(--danger); }
+
+  /* ---------- Section headings ---------- */
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 26px 0 12px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .section-head h2 { font-size: 1.1rem; }
+
+  /* ---------- Card list ---------- */
+  .card-item {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 18px 20px;
+    margin-bottom: 14px;
+    border-left: 6px solid var(--border);
+  }
+  .card-item.urgent { border-left-color: var(--danger); }
+  .card-item.soon { border-left-color: var(--warn); }
+  .card-item.calm { border-left-color: var(--ok); }
+  .card-item.paid { border-left-color: var(--ok); opacity: 0.85; }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .card-name { font-size: 1.12rem; font-weight: 700; }
+  .card-meta { color: var(--text-soft); font-size: 0.88rem; }
+  .due-badge {
+    font-weight: 700;
+    font-size: 0.92rem;
+    padding: 5px 12px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .due-badge.urgent { background: var(--danger-soft); color: var(--danger); }
+  .due-badge.soon { background: var(--warn-soft); color: var(--warn); }
+  .due-badge.calm { background: var(--ok-soft); color: var(--ok); }
+  .due-badge.paid { background: var(--ok-soft); color: var(--ok); }
+
+  .card-figures {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+    margin: 14px 0 10px;
+  }
+  .fig .fig-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-soft); font-weight: 600; }
+  .fig .fig-value { font-weight: 700; font-size: 1.02rem; }
+
+  .util-track {
+    height: 10px;
+    background: var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+    margin: 6px 0 4px;
+  }
+  .util-fill { height: 100%; border-radius: 999px; transition: width 0.4s ease; }
+  .util-fill.good { background: var(--ok); }
+  .util-fill.warn { background: var(--warn); }
+  .util-fill.bad { background: var(--danger); }
+  .util-caption { font-size: 0.82rem; color: var(--text-soft); }
+
+  .card-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+
+  .empty-state {
+    background: var(--card-bg);
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-soft);
+  }
+  .empty-state p { margin-bottom: 14px; font-size: 1.05rem; }
+
+  /* ---------- Modal ---------- */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 22, 40, 0.45);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 30px 16px;
+    z-index: 100;
+    overflow-y: auto;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: 0 10px 40px rgba(15, 22, 40, 0.25);
+    width: 100%;
+    max-width: 520px;
+    padding: 24px;
+  }
+  .modal h3 { margin-bottom: 4px; }
+  .modal .modal-sub { color: var(--text-soft); font-size: 0.9rem; margin-bottom: 18px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-field { display: flex; flex-direction: column; gap: 4px; }
+  .form-field.full { grid-column: 1 / -1; }
+  .form-field label { font-size: 0.85rem; font-weight: 600; }
+  .form-field .field-hint { font-size: 0.78rem; color: var(--text-soft); }
+  .form-field input, .form-field select {
+    font: inherit;
+    padding: 9px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text);
+    width: 100%;
+  }
+  .form-field input:focus, .form-field select:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: #fff;
+  }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+  .form-error { color: var(--danger); font-size: 0.88rem; margin-top: 10px; display: none; }
+  .form-error.show { display: block; }
+
+  /* ---------- History ---------- */
+  .history-table { width: 100%; border-collapse: collapse; background: var(--card-bg); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+  .history-table th, .history-table td { text-align: left; padding: 10px 14px; font-size: 0.9rem; }
+  .history-table th { background: var(--accent-soft); color: var(--accent); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .history-table tr + tr td { border-top: 1px solid var(--border); }
+  .history-table .amount-payment { color: var(--ok); font-weight: 700; }
+  .history-table .amount-balance { font-weight: 600; }
+  .history-empty { color: var(--text-soft); padding: 16px; background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .history-scroll { overflow-x: auto; }
+
+  /* ---------- Toast ---------- */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--text);
+    color: #fff;
+    padding: 12px 22px;
+    border-radius: 999px;
+    font-weight: 600;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s, transform 0.25s;
+    z-index: 200;
+    max-width: 90vw;
+    text-align: center;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .privacy-note {
+    margin-top: 34px;
+    font-size: 0.82rem;
+    color: var(--text-soft);
+    text-align: center;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12161f;
+      --card-bg: #1b212e;
+      --text: #e8ecf5;
+      --text-soft: #99a3b8;
+      --accent: #7b96ff;
+      --accent-soft: #232d4d;
+      --danger: #ff7676;
+      --danger-soft: #3d2226;
+      --warn: #f0a94b;
+      --warn-soft: #3a2f1c;
+      --ok: #4cc98a;
+      --ok-soft: #1c3529;
+      --border: #2c3547;
+      --shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+    }
+    .form-field input:focus, .form-field select:focus { background: var(--card-bg); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>💳 CCB<span>Gone</span></h1>
+  <div class="header-actions">
+    <button class="btn-quiet" id="btn-export" title="Save a backup file of your data to your drive">⬇ Backup</button>
+    <button class="btn-quiet" id="btn-import" title="Restore data from a backup file">⬆ Restore</button>
+    <input type="file" id="import-file" accept=".json,application/json" hidden>
+    <button class="btn-primary" id="btn-add-card">+ Add card</button>
+  </div>
+</header>
+
+<main>
+  <div id="focus-banner" class="calm" hidden>
+    <div>
+      <div class="focus-title" id="focus-title"></div>
+    <div class="focus-sub" id="focus-sub"></div>
+    </div>
+    <button class="btn-ok btn-big" id="focus-pay-btn" hidden>✓ Mark it paid</button>
+  </div>
+
+  <div class="stats-row" id="stats-row" hidden>
+    <div class="stat">
+      <div class="label">Total balance</div>
+      <div class="value" id="stat-balance">$0</div>
+      <div class="hint" id="stat-limit-hint"></div>
+    </div>
+    <div class="stat">
+      <div class="label">Overall utilization</div>
+      <div class="value" id="stat-util">0%</div>
+      <div class="hint">Under 30% helps your credit score</div>
+    </div>
+    <div class="stat">
+      <div class="label">Min payments due</div>
+      <div class="value" id="stat-min">$0</div>
+      <div class="hint" id="stat-min-hint">across unpaid cards this cycle</div>
+    </div>
+    <div class="stat">
+      <div class="label">Interest cost / month</div>
+      <div class="value" id="stat-interest">$0</div>
+      <div class="hint">estimated, if balances are carried</div>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <h2 id="cards-heading">Your cards</h2>
+  </div>
+  <div id="card-list"></div>
+
+  <div class="section-head">
+    <h2>Recent activity</h2>
+    <button class="btn-quiet" id="btn-toggle-history">Show all</button>
+  </div>
+  <div id="history-container"></div>
+
+  <p class="privacy-note">
+    🔒 All data is stored only in this browser on this computer. Nothing is sent anywhere.
+    Use <strong>Backup</strong> regularly to save a copy to your drive.
+  </p>
+</main>
+
+<!-- Add / Edit card modal -->
+<div class="modal-backdrop" id="card-modal">
+  <div class="modal">
+    <h3 id="card-modal-title">Add a card</h3>
+    <p class="modal-sub">Never enter your full card number — a nickname and the last 4 digits are all you need to track it.</p>
+    <form id="card-form">
+      <div class="form-grid">
+        <div class="form-field full">
+          <label for="f-name">Card nickname *</label>
+          <input id="f-name" required maxlength="40" placeholder="e.g. Chase Freedom, Amazon card">
+        </div>
+        <div class="form-field">
+          <label for="f-last4">Last 4 digits</label>
+          <input id="f-last4" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="1234">
+          <span class="field-hint">Optional — just to tell cards apart</span>
+        </div>
+        <div class="form-field">
+          <label for="f-limit">Credit limit ($) *</label>
+          <input id="f-limit" type="number" min="1" step="0.01" required placeholder="5000">
+        </div>
+        <div class="form-field">
+          <label for="f-balance">Current balance ($) *</label>
+          <input id="f-balance" type="number" min="0" step="0.01" required placeholder="1200">
+        </div>
+        <div class="form-field">
+          <label for="f-apr">Interest rate — APR (%) *</label>
+          <input id="f-apr" type="number" min="0" max="100" step="0.01" required placeholder="24.99">
+        </div>
+        <div class="form-field">
+          <label for="f-due-day">Payment due day *</label>
+          <select id="f-due-day" required></select>
+          <span class="field-hint">Day of the month payment is due</span>
+        </div>
+        <div class="form-field">
+          <label for="f-min">Minimum payment ($) *</label>
+          <input id="f-min" type="number" min="0" step="0.01" required placeholder="35">
+        </div>
+      </div>
+      <p class="form-error" id="card-form-error"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn-quiet" id="card-cancel">Cancel</button>
+        <button type="submit" class="btn-primary" id="card-save">Save card</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Log payment / update balance modal -->
+<div class="modal-backdrop" id="pay-modal">
+  <div class="modal">
+    <h3 id="pay-modal-title">Log a payment</h3>
+    <p class="modal-sub" id="pay-modal-sub"></p>
+    <form id="pay-form">
+      <div class="form-grid">
+        <div class="form-field">
+          <label for="p-amount" id="p-amount-label">Amount paid ($) *</label>
+          <input id="p-amount" type="number" min="0.01" step="0.01" required>
+        </div>
+        <div class="form-field">
+          <label for="p-date">Date *</label>
+          <input id="p-date" type="date" required>
+        </div>
+      </div>
+      <p class="form-error" id="pay-form-error"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn-quiet" id="pay-cancel">Cancel</button>
+        <button type="submit" class="btn-primary" id="pay-save">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+/* =====================================================
+   Storage
+   ===================================================== */
+const STORE_KEY = "ccbgone.v1";
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return { cards: [], history: [] };
+    const data = JSON.parse(raw);
+    if (!Array.isArray(data.cards) || !Array.isArray(data.history)) throw new Error("bad shape");
+    return data;
+  } catch (e) {
+    console.warn("Could not read saved data:", e);
+    return { cards: [], history: [] };
+  }
+}
+
+function saveState() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(state));
+}
+
+let state = loadState();
+
+/* =====================================================
+   Helpers
+   ===================================================== */
+const $ = (id) => document.getElementById(id);
+
+const fmtMoney = (n) =>
+  (n < 0 ? "-$" : "$") + Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const fmtMoneyShort = (n) =>
+  "$" + Math.abs(n).toLocaleString("en-US", { maximumFractionDigits: 0 });
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function todayISO() {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+/* Cycle key = the month of the card's NEXT due date, e.g. "2026-07".
+   "Paid" is tracked per cycle so it resets automatically each month. */
+function nextDueDate(dueDay) {
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  const clamp = (yy, mm) => Math.min(dueDay, new Date(yy, mm + 1, 0).getDate());
+  let due = new Date(y, m, clamp(y, m));
+  const todayMid = new Date(y, m, now.getDate());
+  if (due < todayMid) {
+    due = new Date(y, m + 1, clamp(y, m + 1));
+  }
+  return due;
+}
+
+function cycleKeyFor(dueDate) {
+  return dueDate.getFullYear() + "-" + String(dueDate.getMonth() + 1).padStart(2, "0");
+}
+
+function daysUntil(date) {
+  const now = new Date();
+  const a = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((date - a) / 86400000);
+}
+
+function cardStatus(card) {
+  const due = nextDueDate(card.dueDay);
+  const days = daysUntil(due);
+  const cycle = cycleKeyFor(due);
+  const paid = card.paidCycle === cycle;
+  let level = "calm";
+  if (!paid) {
+    if (days <= 3) level = "urgent";
+    else if (days <= 7) level = "soon";
+  } else {
+    level = "paid";
+  }
+  return { due, days, cycle, paid, level };
+}
+
+function utilization(card) {
+  if (!card.limit) return 0;
+  return (card.balance / card.limit) * 100;
+}
+
+function utilClass(pct) {
+  if (pct >= 70) return "bad";
+  if (pct >= 30) return "warn";
+  return "good";
+}
+
+function monthlyInterest(card) {
+  return card.balance * (card.apr / 100) / 12;
+}
+
+function dueDateLabel(due, days) {
+  const dateStr = due.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  if (days === 0) return "Due TODAY (" + dateStr + ")";
+  if (days === 1) return "Due TOMORROW (" + dateStr + ")";
+  return "Due in " + days + " days (" + dateStr + ")";
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+/* =====================================================
+   Rendering
+   ===================================================== */
+function render() {
+  renderFocus();
+  renderStats();
+  renderCards();
+  renderHistory();
+}
+
+function renderFocus() {
+  const banner = $("focus-banner");
+  if (state.cards.length === 0) { banner.hidden = true; return; }
+  banner.hidden = false;
+
+  const unpaid = state.cards
+    .map((c) => ({ card: c, st: cardStatus(c) }))
+    .filter((x) => !x.st.paid)
+    .sort((a, b) => a.st.days - b.st.days);
+
+  const payBtn = $("focus-pay-btn");
+  if (unpaid.length === 0) {
+    banner.className = "calm";
+    $("focus-title").textContent = "🎉 All caught up!";
+    $("focus-sub").textContent = "Every card is marked paid for this cycle. Nothing to do right now.";
+    payBtn.hidden = true;
+    return;
+  }
+
+  const next = unpaid[0];
+  banner.className = next.st.level === "calm" ? "calm" : next.st.level;
+  const amount = Math.min(next.card.minPayment, next.card.balance) || next.card.minPayment;
+  $("focus-title").textContent = "Next up: pay " + next.card.name + " — " + dueDateLabel(next.st.due, next.st.days);
+  $("focus-sub").textContent =
+    "Minimum payment " + fmtMoney(amount) +
+    (unpaid.length > 1 ? " · " + (unpaid.length - 1) + " more card" + (unpaid.length > 2 ? "s" : "") + " after this one" : " · last one this cycle");
+  payBtn.hidden = false;
+  payBtn.onclick = () => openPayModal(next.card.id, "payment", true);
+}
+
+function renderStats() {
+  const row = $("stats-row");
+  if (state.cards.length === 0) { row.hidden = true; return; }
+  row.hidden = false;
+
+  const totalBalance = state.cards.reduce((s, c) => s + c.balance, 0);
+  const totalLimit = state.cards.reduce((s, c) => s + c.limit, 0);
+  const util = totalLimit ? (totalBalance / totalLimit) * 100 : 0;
+  const unpaid = state.cards.filter((c) => !cardStatus(c).paid);
+  const minDue = unpaid.reduce((s, c) => s + Math.min(c.minPayment, Math.max(c.balance, 0) || c.minPayment), 0);
+  const interest = state.cards.reduce((s, c) => s + monthlyInterest(c), 0);
+
+  $("stat-balance").textContent = fmtMoneyShort(totalBalance);
+  $("stat-limit-hint").textContent = "of " + fmtMoneyShort(totalLimit) + " total limit";
+
+  const utilEl = $("stat-util");
+  utilEl.textContent = util.toFixed(0) + "%";
+  utilEl.className = "value " + utilClass(util);
+
+  $("stat-min").textContent = fmtMoneyShort(minDue);
+  $("stat-min-hint").textContent = unpaid.length === 0
+    ? "all paid this cycle 🎉"
+    : "across " + unpaid.length + " unpaid card" + (unpaid.length > 1 ? "s" : "");
+
+  $("stat-interest").textContent = fmtMoneyShort(interest);
+}
+
+function renderCards() {
+  const list = $("card-list");
+  list.innerHTML = "";
+
+  if (state.cards.length === 0) {
+    list.innerHTML =
+      '<div class="empty-state">' +
+      "<p>No cards yet. Add your first card — it takes about a minute,<br>and you only have to do it once.</p>" +
+      '<button class="btn-primary btn-big" id="empty-add">+ Add your first card</button></div>';
+    $("empty-add").onclick = () => openCardModal(null);
+    $("cards-heading").textContent = "Your cards";
+    return;
+  }
+
+  $("cards-heading").textContent = "Your cards (" + state.cards.length + ")";
+
+  const sorted = [...state.cards]
+    .map((c) => ({ card: c, st: cardStatus(c) }))
+    .sort((a, b) => (a.st.paid === b.st.paid ? a.st.days - b.st.days : a.st.paid ? 1 : -1));
+
+  for (const { card, st } of sorted) {
+    const pct = utilization(card);
+    const uc = utilClass(pct);
+    const el = document.createElement("div");
+    el.className = "card-item " + st.level;
+
+    const badge = st.paid
+      ? '<span class="due-badge paid">✓ Paid this cycle</span>'
+      : '<span class="due-badge ' + st.level + '">' + dueDateLabel(st.due, st.days) + "</span>";
+
+    el.innerHTML =
+      '<div class="card-top">' +
+        "<div>" +
+          '<div class="card-name">' + escapeHTML(card.name) + "</div>" +
+          '<div class="card-meta">' + (card.last4 ? "•••• " + escapeHTML(card.last4) + " · " : "") + card.apr.toFixed(2) + "% APR</div>" +
+        "</div>" + badge +
+      "</div>" +
+      '<div class="card-figures">' +
+        '<div class="fig"><div class="fig-label">Balance</div><div class="fig-value">' + fmtMoney(card.balance) + "</div></div>" +
+        '<div class="fig"><div class="fig-label">Limit</div><div class="fig-value">' + fmtMoney(card.limit) + "</div></div>" +
+        '<div class="fig"><div class="fig-label">Min payment</div><div class="fig-value">' + fmtMoney(card.minPayment) + "</div></div>" +
+        '<div class="fig"><div class="fig-label">Interest / mo</div><div class="fig-value">' + fmtMoney(monthlyInterest(card)) + "</div></div>" +
+      "</div>" +
+      '<div class="util-track"><div class="util-fill ' + uc + '" style="width:' + Math.min(pct, 100) + '%"></div></div>' +
+      '<div class="util-caption">' + pct.toFixed(0) + "% of limit used" + (pct >= 30 ? " — paying it below 30% helps your score" : "") + "</div>" +
+      '<div class="card-actions">' +
+        (st.paid ? "" : '<button class="btn-ok" data-act="pay">✓ Log payment</button>') +
+        '<button class="btn-ghost" data-act="balance">Update balance</button>' +
+        '<button class="btn-quiet" data-act="edit">Edit</button>' +
+        '<button class="btn-quiet" data-act="delete">Delete</button>' +
+      "</div>";
+
+    el.querySelectorAll("[data-act]").forEach((btn) => {
+      btn.onclick = () => {
+        const act = btn.dataset.act;
+        if (act === "pay") openPayModal(card.id, "payment", true);
+        else if (act === "balance") openPayModal(card.id, "balance", false);
+        else if (act === "edit") openCardModal(card.id);
+        else if (act === "delete") deleteCard(card.id);
+      };
+    });
+    list.appendChild(el);
+  }
+}
+
+let showAllHistory = false;
+
+function renderHistory() {
+  const container = $("history-container");
+  const toggle = $("btn-toggle-history");
+
+  if (state.history.length === 0) {
+    container.innerHTML = '<div class="history-empty">Payments and balance updates you log will show up here, so you can look back at what you\'ve done.</div>';
+    toggle.hidden = true;
+    return;
+  }
+  toggle.hidden = false;
+  toggle.textContent = showAllHistory ? "Show recent" : "Show all (" + state.history.length + ")";
+
+  const entries = [...state.history].sort((a, b) => (b.date + b.ts).localeCompare(a.date + a.ts));
+  const shown = showAllHistory ? entries : entries.slice(0, 8);
+
+  let rows = "";
+  for (const h of shown) {
+    const card = state.cards.find((c) => c.id === h.cardId);
+    const cardName = card ? card.name : h.cardName || "(deleted card)";
+    const dateStr = new Date(h.date + "T12:00:00").toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+    if (h.type === "payment") {
+      rows += "<tr><td>" + dateStr + "</td><td>" + escapeHTML(cardName) + '</td><td>Payment</td><td class="amount-payment">−' + fmtMoney(h.amount).slice(1) + "</td></tr>";
+    } else {
+      rows += "<tr><td>" + dateStr + "</td><td>" + escapeHTML(cardName) + '</td><td>Balance update</td><td class="amount-balance">' + fmtMoney(h.amount) + "</td></tr>";
+    }
+  }
+
+  container.innerHTML =
+    '<div class="history-scroll"><table class="history-table">' +
+    "<thead><tr><th>Date</th><th>Card</th><th>What</th><th>Amount</th></tr></thead>" +
+    "<tbody>" + rows + "</tbody></table></div>";
+}
+
+function escapeHTML(s) {
+  return String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+}
+
+/* =====================================================
+   Card modal (add / edit)
+   ===================================================== */
+let editingCardId = null;
+
+(function populateDueDays() {
+  const sel = $("f-due-day");
+  for (let d = 1; d <= 31; d++) {
+    const opt = document.createElement("option");
+    opt.value = d;
+    opt.textContent = ordinal(d);
+    sel.appendChild(opt);
+  }
+})();
+
+function ordinal(n) {
+  const s = ["th", "st", "nd", "rd"], v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]) + " of the month";
+}
+
+function openCardModal(cardId) {
+  editingCardId = cardId;
+  const form = $("card-form");
+  form.reset();
+  $("card-form-error").classList.remove("show");
+
+  if (cardId) {
+    const card = state.cards.find((c) => c.id === cardId);
+    if (!card) return;
+    $("card-modal-title").textContent = "Edit " + card.name;
+    $("f-name").value = card.name;
+    $("f-last4").value = card.last4 || "";
+    $("f-limit").value = card.limit;
+    $("f-balance").value = card.balance;
+    $("f-apr").value = card.apr;
+    $("f-due-day").value = card.dueDay;
+    $("f-min").value = card.minPayment;
+  } else {
+    $("card-modal-title").textContent = "Add a card";
+    $("f-due-day").value = 1;
+  }
+  $("card-modal").classList.add("open");
+  $("f-name").focus();
+}
+
+$("btn-add-card").onclick = () => openCardModal(null);
+$("card-cancel").onclick = () => $("card-modal").classList.remove("open");
+
+$("card-form").onsubmit = (e) => {
+  e.preventDefault();
+  const errEl = $("card-form-error");
+  errEl.classList.remove("show");
+
+  const name = $("f-name").value.trim();
+  const last4 = $("f-last4").value.trim();
+  const limit = parseFloat($("f-limit").value);
+  const balance = parseFloat($("f-balance").value);
+  const apr = parseFloat($("f-apr").value);
+  const dueDay = parseInt($("f-due-day").value, 10);
+  const minPayment = parseFloat($("f-min").value);
+
+  const fail = (msg) => { errEl.textContent = msg; errEl.classList.add("show"); };
+  if (!name) return fail("Give the card a nickname.");
+  if (last4 && !/^\d{4}$/.test(last4)) return fail("Last 4 digits must be exactly 4 numbers (or leave it blank).");
+  if (last4 && /^\d{15,16}$/.test($("f-last4").value)) return fail("That looks like a full card number — please only enter the last 4 digits.");
+  if (!(limit > 0)) return fail("Credit limit must be greater than zero.");
+  if (!(balance >= 0)) return fail("Balance can't be negative.");
+  if (!(apr >= 0 && apr <= 100)) return fail("APR should be between 0 and 100.");
+  if (!(minPayment >= 0)) return fail("Minimum payment can't be negative.");
+
+  if (editingCardId) {
+    const card = state.cards.find((c) => c.id === editingCardId);
+    Object.assign(card, { name, last4, limit, balance, apr, dueDay, minPayment });
+    toast("Card updated");
+  } else {
+    state.cards.push({ id: uid(), name, last4, limit, balance, apr, dueDay, minPayment, paidCycle: null });
+    toast("Card added — you're set!");
+  }
+  saveState();
+  $("card-modal").classList.remove("open");
+  render();
+};
+
+function deleteCard(cardId) {
+  const card = state.cards.find((c) => c.id === cardId);
+  if (!card) return;
+  if (!confirm('Delete "' + card.name + '"? Its payment history will stay in Recent activity.')) return;
+  // Keep the card's name on its history entries so history still makes sense.
+  state.history.forEach((h) => { if (h.cardId === cardId) h.cardName = card.name; });
+  state.cards = state.cards.filter((c) => c.id !== cardId);
+  saveState();
+  render();
+  toast("Card deleted");
+}
+
+/* =====================================================
+   Payment / balance modal
+   ===================================================== */
+let payTarget = null; // { cardId, mode, markPaid }
+
+function openPayModal(cardId, mode, markPaid) {
+  const card = state.cards.find((c) => c.id === cardId);
+  if (!card) return;
+  payTarget = { cardId, mode, markPaid };
+  $("pay-form").reset();
+  $("pay-form-error").classList.remove("show");
+  $("p-date").value = todayISO();
+
+  if (mode === "payment") {
+    $("pay-modal-title").textContent = "Log a payment — " + card.name;
+    $("pay-modal-sub").textContent = "Balance " + fmtMoney(card.balance) + " · minimum payment " + fmtMoney(card.minPayment) + ". This marks the card paid for this cycle and lowers the balance.";
+    $("p-amount-label").textContent = "Amount paid ($) *";
+    $("p-amount").value = Math.min(card.minPayment, card.balance) || card.minPayment || "";
+    $("p-amount").min = "0.01";
+  } else {
+    $("pay-modal-title").textContent = "Update balance — " + card.name;
+    $("pay-modal-sub").textContent = "Enter what the balance is right now (from your banking app or statement). Current recorded balance: " + fmtMoney(card.balance) + ".";
+    $("p-amount-label").textContent = "New balance ($) *";
+    $("p-amount").value = card.balance;
+    $("p-amount").min = "0";
+  }
+  $("pay-modal").classList.add("open");
+  $("p-amount").focus();
+  $("p-amount").select();
+}
+
+$("pay-cancel").onclick = () => $("pay-modal").classList.remove("open");
+
+$("pay-form").onsubmit = (e) => {
+  e.preventDefault();
+  const errEl = $("pay-form-error");
+  errEl.classList.remove("show");
+  const card = state.cards.find((c) => c.id === payTarget.cardId);
+  if (!card) return;
+
+  const amount = parseFloat($("p-amount").value);
+  const date = $("p-date").value;
+  const fail = (msg) => { errEl.textContent = msg; errEl.classList.add("show"); };
+  if (!date) return fail("Pick a date.");
+  if (isNaN(amount)) return fail("Enter an amount.");
+
+  if (payTarget.mode === "payment") {
+    if (!(amount > 0)) return fail("Payment must be more than zero.");
+    card.balance = Math.max(0, card.balance - amount);
+    if (payTarget.markPaid) {
+      card.paidCycle = cycleKeyFor(nextDueDate(card.dueDay));
+    }
+    state.history.push({ id: uid(), cardId: card.id, type: "payment", amount, date, ts: new Date().toISOString() });
+    toast("Payment logged ✓ " + card.name + " is handled");
+  } else {
+    if (!(amount >= 0)) return fail("Balance can't be negative.");
+    card.balance = amount;
+    state.history.push({ id: uid(), cardId: card.id, type: "balance", amount, date, ts: new Date().toISOString() });
+    toast("Balance updated");
+  }
+  saveState();
+  $("pay-modal").classList.remove("open");
+  render();
+};
+
+/* =====================================================
+   Backup / restore
+   ===================================================== */
+$("btn-export").onclick = () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "ccbgone-backup-" + todayISO() + ".json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("Backup saved to your Downloads folder");
+};
+
+$("btn-import").onclick = () => $("import-file").click();
+
+$("import-file").onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!Array.isArray(data.cards) || !Array.isArray(data.history)) throw new Error("Not a CCBGone backup file");
+      if (state.cards.length > 0 &&
+          !confirm("Restoring will replace your current data (" + state.cards.length + " card(s)). Continue?")) {
+        return;
+      }
+      state = data;
+      saveState();
+      render();
+      toast("Backup restored — " + state.cards.length + " card(s) loaded");
+    } catch (err) {
+      alert("Sorry, that file doesn't look like a CCBGone backup. Nothing was changed.");
+    } finally {
+      e.target.value = "";
+    }
+  };
+  reader.readAsText(file);
+};
+
+/* =====================================================
+   History toggle, modal close on backdrop / Escape
+   ===================================================== */
+$("btn-toggle-history").onclick = () => { showAllHistory = !showAllHistory; renderHistory(); };
+
+for (const id of ["card-modal", "pay-modal"]) {
+  $(id).addEventListener("mousedown", (e) => {
+    if (e.target === $(id)) $(id).classList.remove("open");
+  });
+}
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    $("card-modal").classList.remove("open");
+    $("pay-modal").classList.remove("open");
+  }
+});
+
+render();
+</script>
+</body>
+</html>
