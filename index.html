@@ -476,6 +476,37 @@
   #progress-panel .util-track { height: 12px; margin-top: 8px; }
   #progress-panel .progress-fill { height: 100%; border-radius: 999px; background: var(--ok); transition: width 0.5s ease; }
   .amount-charge { color: var(--warn); font-weight: 700; }
+
+  /* ---------- Subscriptions ---------- */
+  .import-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .import-row select {
+    font: inherit; padding: 9px 12px; border: 1.5px solid var(--border);
+    border-radius: 10px; background: var(--bg); color: var(--text);
+  }
+  #paste-box {
+    font: inherit; font-size: 0.85rem; width: 100%; padding: 10px 12px;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    background: var(--bg); color: var(--text); margin: 10px 0;
+  }
+  #paste-box:focus { outline: none; border-color: var(--accent); }
+  details.paste-details { margin-top: 12px; }
+  details.paste-details summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: 0.9rem; }
+  #import-status { margin-top: 12px; font-size: 0.9rem; font-weight: 600; color: var(--ok); }
+  #import-status.err { color: var(--danger); }
+
+  .sub-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--border); flex-wrap: wrap; }
+  .sub-row:first-child { border-top: none; }
+  .sub-main { flex: 1; min-width: 150px; }
+  .sub-name { font-weight: 700; }
+  .sub-detail { font-size: 0.82rem; color: var(--text-soft); }
+  .sub-amount { font-weight: 700; white-space: nowrap; }
+  .sub-annual { font-size: 0.82rem; color: var(--text-soft); white-space: nowrap; }
+  .sub-badge { font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+  .sub-badge.confirmed { background: var(--accent-soft); color: var(--accent); }
+  .sub-badge.likely { background: var(--warn-soft); color: var(--warn); }
+  .sub-badge.soon { background: var(--danger-soft); color: var(--danger); }
+  body.privacy :is(.sub-amount, .sub-annual, .sub-detail) { filter: blur(7px); }
+  body.privacy :is(.sub-amount, .sub-annual, .sub-detail):hover { filter: none; }
 </style>
 </head>
 <body>
@@ -497,6 +528,7 @@
   <button data-tab="dashboard" class="active">📋 Dashboard</button>
   <button data-tab="planner">🎯 Payoff Plan</button>
   <button data-tab="trends">📈 Trends</button>
+  <button data-tab="subs">🔁 Subscriptions</button>
 </nav>
 
 <main>
@@ -536,6 +568,12 @@
       <div class="value good" id="stat-streak">🔥 0</div>
       <div class="hint">payments logged before their due date</div>
     </div>
+  </div>
+
+  <div class="panel" id="upcoming-subs-panel" hidden>
+    <h3>🔁 Recurring charges expected soon</h3>
+    <p class="panel-sub">Detected from your imported statements — money that's about to leave on its own.</p>
+    <div id="upcoming-subs"></div>
   </div>
 
   <div id="progress-panel" hidden>
@@ -640,6 +678,69 @@
     <h3>Total balance over time</h3>
     <p class="panel-sub">Built from the payments and balance updates you log — the longer you use the app, the more this fills in.</p>
     <div id="trend-chart"></div>
+  </div>
+</section>
+
+<!-- ================= SUBSCRIPTIONS ================= -->
+<section class="tab" id="tab-subs">
+  <div class="panel">
+    <h3>🔁 Find your subscriptions</h3>
+    <p class="panel-sub">Import card statements and CCBGone spots the charges that keep coming back — subscriptions, memberships, anything on repeat — and tells you when the next one is expected. Everything is read on this computer only; nothing is uploaded anywhere.</p>
+    <div class="import-row">
+      <button class="btn-primary" id="btn-import-csv">📄 Import statement CSV(s)</button>
+      <input type="file" id="csv-file" accept=".csv,text/csv,text/plain" multiple hidden>
+      <select id="import-card" title="Optionally tag these transactions with one of your cards">
+        <option value="">Which card? (optional)</option>
+      </select>
+    </div>
+    <p class="field-hint" style="margin-top:8px">Your bank's website has a CSV/spreadsheet download wherever you see statements or transactions. Any bank's format works — columns are figured out automatically.</p>
+    <details class="paste-details">
+      <summary>Only have a PDF statement? Paste its rows instead</summary>
+      <textarea id="paste-box" rows="6" placeholder="Open the PDF, select the transaction lines with your mouse, copy, and paste them here. Like:&#10;07/02/2026  NETFLIX.COM 866-579-7172  15.49&#10;07/05/2026  SPOTIFY USA  11.99"></textarea>
+      <button class="btn-ghost" id="btn-scan-paste">Scan pasted text</button>
+    </details>
+    <p id="import-status"></p>
+  </div>
+
+  <div class="stats-row" id="subs-stats" hidden>
+    <div class="stat">
+      <div class="label">Recurring charges found</div>
+      <div class="value" id="subs-count">0</div>
+      <div class="hint" id="subs-count-hint"></div>
+    </div>
+    <div class="stat">
+      <div class="label">Cost per month</div>
+      <div class="value warn" id="subs-monthly">$0</div>
+      <div class="hint">all detected subscriptions combined</div>
+    </div>
+    <div class="stat">
+      <div class="label">Cost per year</div>
+      <div class="value bad" id="subs-yearly">$0</div>
+      <div class="hint">the number that usually surprises people</div>
+    </div>
+  </div>
+
+  <div class="panel" id="subs-coming-panel" hidden>
+    <h3>Coming up in the next 2 weeks</h3>
+    <div id="subs-coming"></div>
+  </div>
+
+  <div class="panel" id="subs-list-panel" hidden>
+    <h3>Everything on repeat</h3>
+    <p class="panel-sub">"Confirmed" repeated 3+ times on a steady rhythm. "Looks recurring" appeared twice with the same amount — keep an eye on it. Not actually a subscription? Hit Ignore.</p>
+    <div id="subs-list"></div>
+  </div>
+
+  <div class="panel" id="txn-panel" hidden>
+    <h3>Imported transactions</h3>
+    <p class="panel-sub" id="txn-summary"></p>
+    <details class="data-table">
+      <summary>See recent transactions</summary>
+      <div class="history-scroll" id="txn-table"></div>
+    </details>
+    <div style="margin-top:14px">
+      <button class="btn-danger" id="btn-clear-txns">Delete all imported transactions</button>
+    </div>
   </div>
 </section>
 </main>
@@ -771,6 +872,8 @@ function freshState() {
     history: [],
     settings: { budget: null, strategy: "avalanche", theme: "auto", privacy: false },
     stats: { onTimeStreak: 0, peakDebt: 0, lastMilestone: 0 },
+    transactions: [],
+    subIgnore: {},
   };
 }
 
@@ -780,6 +883,8 @@ function migrate(data) {
   data.settings = Object.assign({ budget: null, strategy: "avalanche", theme: "auto", privacy: false }, data.settings);
   data.stats = Object.assign({ onTimeStreak: 0, peakDebt: 0, lastMilestone: 0 }, data.stats);
   data.stats.peakDebt = Math.max(data.stats.peakDebt, data.cards.reduce((s, c) => s + (c.balance || 0), 0));
+  data.transactions = Array.isArray(data.transactions) ? data.transactions : [];
+  data.subIgnore = data.subIgnore && typeof data.subIgnore === "object" ? data.subIgnore : {};
   const today = todayISO();
   for (const c of data.cards) {
     c.createdAt = c.createdAt || today;
@@ -1050,10 +1155,12 @@ function render() {
   renderFocus();
   renderStats();
   renderProgress();
+  renderUpcomingSubs();
   renderCards();
   renderHistory();
   if (activeTab() === "planner") renderPlanner();
   if (activeTab() === "trends") renderTrends();
+  if (activeTab() === "subs") renderSubs();
 }
 
 function renderProgress() {
@@ -1984,6 +2091,415 @@ function confetti() {
     else canvas.remove();
   })(t0);
 }
+
+/* =====================================================
+   Statement import: CSV + pasted text parsing
+   ===================================================== */
+function parseCSVText(text) {
+  const rows = [];
+  let row = [], field = "", inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false; }
+      else field += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ",") { row.push(field); field = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(field); field = "";
+      if (row.some((f) => f.trim() !== "")) rows.push(row);
+      row = [];
+    } else field += c;
+  }
+  row.push(field);
+  if (row.some((f) => f.trim() !== "")) rows.push(row);
+  return rows;
+}
+
+const MONTH_ABBR = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+
+/* Accepts YYYY-MM-DD, M/D/YYYY, M/D/YY, M-D-YYYY, "Jul 3, 2026", "3 Jul 2026", M/D. Returns ISO or null. */
+function tryParseDate(s) {
+  s = String(s).trim();
+  let m;
+  const mk = (y, mo, d) => {
+    y = +y; mo = +mo; d = +d;
+    if (y < 100) y += 2000;
+    if (mo < 1 || mo > 12 || d < 1 || d > 31 || y < 1990 || y > 2100) return null;
+    return y + "-" + String(mo).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+  };
+  if ((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return mk(m[1], m[2], m[3]);
+  if ((m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/))) return mk(m[3], m[1], m[2]);
+  if ((m = s.match(/^([A-Za-z]{3,9})\.?\s+(\d{1,2}),?\s+(\d{4})/))) {
+    const mo = MONTH_ABBR[m[1].slice(0, 3).toLowerCase()];
+    return mo ? mk(m[3], mo, m[2]) : null;
+  }
+  if ((m = s.match(/^(\d{1,2})\s+([A-Za-z]{3,9})\.?\s+(\d{4})/))) {
+    const mo = MONTH_ABBR[m[2].slice(0, 3).toLowerCase()];
+    return mo ? mk(m[3], mo, m[1]) : null;
+  }
+  if ((m = s.match(/^(\d{1,2})[\/\-](\d{1,2})$/))) {
+    // No year: pick the year that doesn't land in the future
+    const now = new Date();
+    let y = now.getFullYear();
+    const iso = mk(y, m[1], m[2]);
+    if (!iso) return null;
+    if (parseISODate(iso) > new Date(now.getTime() + 45 * 86400000)) y--;
+    return mk(y, m[1], m[2]);
+  }
+  return null;
+}
+
+function tryParseAmount(s) {
+  s = String(s).trim();
+  if (s === "") return null;
+  const neg = /^\(.*\)$/.test(s) || /^-/.test(s);
+  const n = parseFloat(s.replace(/[$,()\s]/g, "").replace(/^-/, ""));
+  if (isNaN(n)) return null;
+  return neg ? -n : n;
+}
+
+/* Rows (arrays of fields) -> transactions. Figures out which columns are
+   date / description / amount, from headers when present, else by sniffing. */
+function rowsToTransactions(rows) {
+  if (rows.length === 0) return [];
+  let dateCol = -1, descCol = -1, amtCol = -1, debitCol = -1, creditCol = -1, start = 0;
+
+  const header = rows[0].map((h) => h.trim().toLowerCase());
+  const findH = (...names) => header.findIndex((h) => names.some((n) => h === n || h.includes(n)));
+  const hDate = findH("transaction date", "trans date", "posted date", "post date", "date");
+  const hDesc = findH("description", "merchant", "payee", "details", "name", "memo");
+  const hAmt = findH("amount");
+  const hDebit = findH("debit", "withdrawal");
+  const hCredit = findH("credit", "deposit");
+  if (hDate !== -1 && (hDesc !== -1) && (hAmt !== -1 || hDebit !== -1)) {
+    dateCol = hDate; descCol = hDesc; amtCol = hAmt; debitCol = hDebit; creditCol = hCredit; start = 1;
+  } else {
+    // No usable header: sniff the first data-looking row
+    const probe = rows.find((r) => r.some((f) => tryParseDate(f)));
+    if (!probe) return [];
+    dateCol = probe.findIndex((f) => tryParseDate(f));
+    // amount: last column that parses as a number and isn't the date
+    for (let i = probe.length - 1; i >= 0; i--) {
+      if (i !== dateCol && tryParseAmount(probe[i]) !== null && !tryParseDate(probe[i])) { amtCol = i; break; }
+    }
+    // description: longest remaining text field
+    let bestLen = -1;
+    probe.forEach((f, i) => {
+      if (i !== dateCol && i !== amtCol && f.trim().length > bestLen && tryParseAmount(f) === null) { bestLen = f.trim().length; descCol = i; }
+    });
+    if (amtCol === -1 || descCol === -1) return [];
+  }
+
+  const out = [];
+  for (let i = start; i < rows.length; i++) {
+    const r = rows[i];
+    const date = tryParseDate(r[dateCol] || "");
+    if (!date) continue;
+    const desc = (r[descCol] || "").trim();
+    let amount = null;
+    if (amtCol !== -1 && r[amtCol] !== undefined && r[amtCol].trim() !== "") amount = tryParseAmount(r[amtCol]);
+    if (amount === null && debitCol !== -1 && r[debitCol] && r[debitCol].trim() !== "") amount = Math.abs(tryParseAmount(r[debitCol]) ?? NaN) || null;
+    if (amount === null && creditCol !== -1 && r[creditCol] && r[creditCol].trim() !== "") {
+      const cr = tryParseAmount(r[creditCol]);
+      amount = cr === null ? null : -Math.abs(cr);
+    }
+    if (amount === null || !desc) continue;
+    out.push({ date, desc, amount });
+  }
+  return out;
+}
+
+/* Pasted statement text -> transactions. Per line: find a date, an amount at
+   the end, and treat what's between as the description. */
+function pasteToTransactions(text) {
+  const out = [];
+  for (let line of text.split(/\n/)) {
+    line = line.trim();
+    if (!line) continue;
+    const dm = line.match(/(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[\/\-]\d{1,2}([\/\-]\d{2,4})?|[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4}|[A-Za-z]{3,9}\.?\s+\d{1,2}\b)/);
+    if (!dm) continue;
+    let date = tryParseDate(dm[1]);
+    if (!date) {
+      // "Jul 3" without year
+      const m2 = dm[1].match(/^([A-Za-z]{3,9})\.?\s+(\d{1,2})$/);
+      if (m2 && MONTH_ABBR[m2[1].slice(0, 3).toLowerCase()]) {
+        const now = new Date();
+        let y = now.getFullYear();
+        let iso = y + "-" + String(MONTH_ABBR[m2[1].slice(0, 3).toLowerCase()]).padStart(2, "0") + "-" + String(+m2[2]).padStart(2, "0");
+        if (parseISODate(iso) > new Date(now.getTime() + 45 * 86400000)) iso = (y - 1) + iso.slice(4);
+        date = iso;
+      } else continue;
+    }
+    const am = line.match(/\(?-?\$?\s?-?[\d,]+\.\d{2}\)?\s*(CR)?$/i);
+    if (!am) continue;
+    let amount = tryParseAmount(am[0].replace(/CR$/i, ""));
+    if (amount === null) continue;
+    if (/CR\s*$/i.test(line)) amount = -Math.abs(amount);
+    let desc = line.slice(dm.index + dm[1].length, am.index).trim();
+    // strip a second date (many statements have trans + post date columns)
+    const d2 = desc.match(/^(\d{1,2}[\/\-]\d{1,2}([\/\-]\d{2,4})?|[A-Za-z]{3,9}\.?\s+\d{1,2},?(\s+\d{4})?)\s+/);
+    if (d2 && tryParseDate(d2[1])) desc = desc.slice(d2[0].length).trim();
+    if (!desc) continue;
+    out.push({ date, desc, amount });
+  }
+  return out;
+}
+
+const PAYMENT_RE = /\b(payment|autopay|auto-pay|thank you|e-payment|epay|online pmt|ach|direct debit|balance transfer|statement credit)\b/i;
+
+/* Normalize + dedupe + sign-correct a parsed batch, then merge into state.
+   Returns {added, skipped, from, to}. */
+function importTransactions(parsed, cardId) {
+  if (parsed.length === 0) return { added: 0, skipped: 0 };
+  // Sign convention: if most non-payment rows are negative, charges are negative — flip.
+  const nonPay = parsed.filter((t) => !PAYMENT_RE.test(t.desc));
+  const negs = nonPay.filter((t) => t.amount < 0).length;
+  if (nonPay.length > 0 && negs > nonPay.length / 2) parsed = parsed.map((t) => ({ ...t, amount: -t.amount }));
+
+  const existing = new Set(state.transactions.map((t) => t.date + "|" + t.desc.toLowerCase() + "|" + t.amount.toFixed(2)));
+  let added = 0, skipped = 0;
+  const dates = [];
+  for (const t of parsed) {
+    const key = t.date + "|" + t.desc.toLowerCase() + "|" + t.amount.toFixed(2);
+    if (existing.has(key)) { skipped++; continue; }
+    existing.add(key);
+    state.transactions.push({ id: uid(), date: t.date, desc: t.desc.slice(0, 120), amount: t.amount, cardId: cardId || null });
+    dates.push(t.date);
+    added++;
+  }
+  if (added) saveState();
+  dates.sort();
+  return { added, skipped, from: dates[0], to: dates[dates.length - 1] };
+}
+
+/* =====================================================
+   Recurring-charge detection
+   ===================================================== */
+function normalizeMerchant(desc) {
+  const tokens = desc.toUpperCase()
+    .replace(/\d{2,}/g, " ")            // store #s, phone #s, dates
+    .replace(/[^A-Z*.& ]/g, " ")
+    .split(/\s+/)
+    .filter((t) => t.length > 1 && !["THE", "INC", "LLC", "COM", "WWW", "USA", "CO"].includes(t));
+  return tokens.slice(0, 3).join(" ") || desc.toUpperCase().slice(0, 20).trim();
+}
+
+const CADENCES = [
+  { name: "weekly", min: 5.5, max: 8.5, perYear: 52, tol: 3 },
+  { name: "every 2 weeks", min: 12, max: 17, perYear: 26, tol: 4 },
+  { name: "monthly", min: 25, max: 36, perYear: 12, tol: 7 },
+  { name: "every 2 months", min: 55, max: 70, perYear: 6, tol: 10 },
+  { name: "quarterly", min: 80, max: 100, perYear: 4, tol: 15 },
+  { name: "twice a year", min: 168, max: 200, perYear: 2, tol: 20 },
+  { name: "yearly", min: 330, max: 400, perYear: 1, tol: 30 },
+];
+
+function median(arr) {
+  const s = [...arr].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+function detectSubscriptions() {
+  const groups = new Map();
+  for (const t of state.transactions) {
+    if (t.amount <= 0 || PAYMENT_RE.test(t.desc)) continue; // charges only
+    const key = normalizeMerchant(t.desc);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(t);
+  }
+
+  const subs = [];
+  for (const [key, txns] of groups) {
+    if (txns.length < 2) continue;
+    // one per day (same-day repeats are separate purchases, not a rhythm)
+    const byDay = new Map();
+    for (const t of txns) byDay.set(t.date, t);
+    const uniq = [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date));
+    if (uniq.length < 2) continue;
+
+    const gaps = [];
+    for (let i = 1; i < uniq.length; i++) {
+      gaps.push(Math.round((parseISODate(uniq[i].date) - parseISODate(uniq[i - 1].date)) / 86400000));
+    }
+    const medGap = median(gaps);
+    const cadence = CADENCES.find((c) => medGap >= c.min && medGap <= c.max);
+    if (!cadence) continue;
+
+    const gapsOK = gaps.filter((g) => Math.abs(g - medGap) <= cadence.tol).length >= Math.max(1, Math.ceil(gaps.length * 0.6));
+    const amts = uniq.map((t) => t.amount);
+    const medAmt = median(amts);
+    const amtsOK = amts.filter((a) => Math.abs(a - medAmt) <= Math.max(2, medAmt * 0.25)).length >= Math.ceil(amts.length * 0.6);
+
+    let confidence = null;
+    if (uniq.length >= 3 && gapsOK && amtsOK) confidence = "confirmed";
+    else if (uniq.length === 2 && Math.abs(amts[0] - amts[1]) <= Math.max(0.02, medAmt * 0.02)) confidence = "likely";
+    if (!confidence) continue;
+
+    const last = uniq[uniq.length - 1];
+    const nextDate = new Date(parseISODate(last.date).getTime() + medGap * 86400000);
+    subs.push({
+      key,
+      name: last.desc.replace(/\s+/g, " ").trim(),
+      amount: medAmt,
+      cadence: cadence.name,
+      perYear: cadence.perYear,
+      annual: medAmt * cadence.perYear,
+      times: uniq.length,
+      lastDate: last.date,
+      next: nextDate,
+      daysToNext: daysUntil(nextDate),
+      confidence,
+      ignored: !!state.subIgnore[key],
+    });
+  }
+  subs.sort((a, b) => b.annual - a.annual);
+  return subs;
+}
+
+/* =====================================================
+   Subscriptions tab rendering + import wiring
+   ===================================================== */
+function subRowHTML(s, showIgnore) {
+  const soon = s.daysToNext <= 14;
+  const nextStr = s.next.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const when = s.daysToNext < -3 ? "was expected " + nextStr + " — may have been cancelled 🎉"
+    : s.daysToNext <= 0 ? "expected any day now (~" + nextStr + ")"
+    : "next expected ~" + nextStr + " (" + s.daysToNext + "d)";
+  return '<div class="sub-row">' +
+    '<div class="sub-main">' +
+      '<div class="sub-name">' + escapeHTML(s.name) + "</div>" +
+      '<div class="sub-detail">' + s.cadence + " · seen " + s.times + "× · " + when + "</div>" +
+    "</div>" +
+    '<span class="sub-badge ' + (soon && s.daysToNext >= -3 ? "soon" : s.confidence) + '">' +
+      (soon && s.daysToNext >= -3 ? "⏰ coming up" : s.confidence === "confirmed" ? "confirmed" : "looks recurring") + "</span>" +
+    '<div><div class="sub-amount">' + fmtMoney(s.amount) + "</div>" +
+    '<div class="sub-annual">' + fmtMoneyShort(s.annual) + "/yr</div></div>" +
+    (showIgnore ? '<button class="btn-quiet" data-ignore="' + escapeHTML(s.key) + '">' + (s.ignored ? "Un-ignore" : "Ignore") + "</button>" : "") +
+  "</div>";
+}
+
+function renderUpcomingSubs() {
+  const panel = $("upcoming-subs-panel");
+  const subs = detectSubscriptions().filter((s) => !s.ignored && s.daysToNext <= 14 && s.daysToNext >= -3);
+  if (subs.length === 0) { panel.hidden = true; return; }
+  panel.hidden = false;
+  subs.sort((a, b) => a.daysToNext - b.daysToNext);
+  $("upcoming-subs").innerHTML = subs.map((s) => subRowHTML(s, false)).join("");
+}
+
+function renderSubs() {
+  // card selector
+  const sel = $("import-card");
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Which card? (optional)</option>' +
+    state.cards.map((c) => '<option value="' + c.id + '">' + escapeHTML(c.name) + "</option>").join("");
+  sel.value = cur;
+
+  const txns = state.transactions;
+  const subsAll = detectSubscriptions();
+  const subs = subsAll.filter((s) => !s.ignored);
+  const ignored = subsAll.filter((s) => s.ignored);
+
+  $("txn-panel").hidden = txns.length === 0;
+  if (txns.length) {
+    const dates = txns.map((t) => t.date).sort();
+    $("txn-summary").textContent = txns.length + " transactions imported, " +
+      new Date(dates[0] + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " to " +
+      new Date(dates[dates.length - 1] + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) +
+      ". The more months you import, the better the detection.";
+    const recent = [...txns].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 50);
+    $("txn-table").innerHTML = '<table class="history-table"><thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead><tbody>' +
+      recent.map((t) => "<tr><td>" + t.date + "</td><td>" + escapeHTML(t.desc) + '</td><td class="' + (t.amount < 0 ? "amount-payment" : "amount-balance") + '">' + fmtMoney(t.amount) + "</td></tr>").join("") +
+      "</tbody></table>";
+  }
+
+  const stats = $("subs-stats");
+  if (txns.length === 0) {
+    stats.hidden = true;
+    $("subs-coming-panel").hidden = true;
+    $("subs-list-panel").hidden = true;
+    return;
+  }
+  stats.hidden = false;
+  const monthly = subs.reduce((s, x) => s + x.annual / 12, 0);
+  $("subs-count").textContent = subs.length;
+  $("subs-count-hint").textContent = subs.length === 0 ? "none detected yet — import more months" :
+    subs.filter((s) => s.confidence === "confirmed").length + " confirmed, " + subs.filter((s) => s.confidence === "likely").length + " likely";
+  $("subs-monthly").textContent = fmtMoneyShort(monthly);
+  $("subs-yearly").textContent = fmtMoneyShort(monthly * 12);
+
+  const coming = subs.filter((s) => s.daysToNext <= 14 && s.daysToNext >= -3).sort((a, b) => a.daysToNext - b.daysToNext);
+  $("subs-coming-panel").hidden = coming.length === 0;
+  $("subs-coming").innerHTML = coming.map((s) => subRowHTML(s, false)).join("");
+
+  $("subs-list-panel").hidden = subsAll.length === 0;
+  $("subs-list").innerHTML =
+    subs.map((s) => subRowHTML(s, true)).join("") +
+    (ignored.length ? '<div class="sub-detail" style="margin-top:10px">Ignored:</div>' + ignored.map((s) => subRowHTML(s, true)).join("") : "");
+  $("subs-list").querySelectorAll("[data-ignore]").forEach((btn) => {
+    btn.onclick = () => {
+      const k = btn.dataset.ignore;
+      if (state.subIgnore[k]) delete state.subIgnore[k];
+      else state.subIgnore[k] = true;
+      saveState();
+      render();
+    };
+  });
+}
+
+function reportImport(res, sourceLabel) {
+  const el = $("import-status");
+  if (!res || (res.added === 0 && !res.skipped)) {
+    el.className = "err";
+    el.textContent = "Couldn't find any transactions in " + sourceLabel + ". Make sure it has dates, descriptions, and amounts.";
+  } else if (res.added === 0) {
+    el.className = "";
+    el.textContent = "Nothing new — all " + res.skipped + " transactions from " + sourceLabel + " were already imported.";
+  } else {
+    el.className = "";
+    el.textContent = "✓ Imported " + res.added + " transactions (" + res.from + " to " + res.to + ")" +
+      (res.skipped ? " · " + res.skipped + " duplicates skipped" : "") + ". Scroll down for what it found.";
+  }
+}
+
+$("btn-import-csv").onclick = () => $("csv-file").click();
+
+$("csv-file").onchange = async (e) => {
+  const files = [...e.target.files];
+  if (!files.length) return;
+  let total = { added: 0, skipped: 0, from: null, to: null };
+  for (const f of files) {
+    const text = await f.text();
+    const res = importTransactions(rowsToTransactions(parseCSVText(text)), $("import-card").value);
+    total.added += res.added || 0;
+    total.skipped += res.skipped || 0;
+    if (res.from && (!total.from || res.from < total.from)) total.from = res.from;
+    if (res.to && (!total.to || res.to > total.to)) total.to = res.to;
+  }
+  reportImport(total, files.length + " file(s)");
+  e.target.value = "";
+  render();
+};
+
+$("btn-scan-paste").onclick = () => {
+  const text = $("paste-box").value;
+  if (!text.trim()) { reportImport(null, "the paste box"); return; }
+  const res = importTransactions(pasteToTransactions(text), $("import-card").value);
+  reportImport(res, "the pasted text");
+  if (res.added) $("paste-box").value = "";
+  render();
+};
+
+$("btn-clear-txns").onclick = () => {
+  if (!confirm("Delete all " + state.transactions.length + " imported transactions? Your cards, history, and settings are not affected.")) return;
+  state.transactions = [];
+  saveState();
+  render();
+  toast("Imported transactions deleted");
+};
 
 /* =====================================================
    Calendar export (.ics)

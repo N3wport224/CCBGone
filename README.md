@@ -75,8 +75,28 @@ APR periods and their end dates.
 ### 📈 Trends — is it working?
 
 A chart of your total balance over time, built automatically from what you log,
-plus: balance now, change over the last 30 days, and how much you paid in the
-last 30 days. Watching the line go down is the point.
+plus: balance now, change over the last 30 days, and how much you paid and
+charged in the last 30 days. Watching the line go down is the point.
+
+### 🔁 Subscriptions — what's quietly billing me?
+
+Feed it your card statements and it finds every charge that keeps coming back:
+
+- **Import statement CSVs** — every bank's website has a CSV/spreadsheet
+  download next to the statements. Any bank's format works; the columns are
+  figured out automatically, and re-importing the same file is safe
+  (duplicates are skipped). Import several months at once for best results.
+- **Only have PDFs?** Open the PDF, select the transaction rows, copy, and
+  paste them into the paste box. It parses the lines for you.
+- It detects **weekly, monthly, quarterly, and yearly rhythms**, labels each
+  find *confirmed* (3+ times on a steady beat) or *looks recurring* (twice,
+  same amount), and shows what it costs **per month and per year** — the
+  yearly number is usually the wake-up call.
+- **"Coming up in the next 2 weeks"** lists the charges about to happen, and
+  the same list appears on your Dashboard so you're never surprised.
+- False positive? Hit **Ignore**. Payments and credits are excluded
+  automatically. Everything is parsed on your computer — statements are never
+  uploaded anywhere.
 
 ## 📅 Get reminders without opening the app
 
