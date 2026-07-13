@@ -21,8 +21,12 @@
     --border: #dde3ee;
     --radius: 14px;
     --shadow: 0 2px 10px rgba(20, 32, 66, 0.07);
+    --chart-s1: #2a78d6;
+    --chart-s2: #1baf7a;
+    --chart-grid: #e6eaf2;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background: var(--bg);
@@ -33,7 +37,7 @@
   header {
     background: var(--card-bg);
     border-bottom: 1px solid var(--border);
-    padding: 16px 20px;
+    padding: 12px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -45,8 +49,33 @@
   }
   header h1 { font-size: 1.25rem; }
   header h1 span { color: var(--accent); }
-  .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .header-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   main { max-width: 980px; margin: 0 auto; padding: 20px; }
+
+  /* ---------- Tabs ---------- */
+  nav.tabs {
+    display: flex;
+    gap: 6px;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 14px 20px 0;
+  }
+  nav.tabs button {
+    background: transparent;
+    color: var(--text-soft);
+    border: none;
+    border-radius: 10px 10px 0 0;
+    padding: 10px 18px;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  nav.tabs button.active {
+    background: var(--card-bg);
+    color: var(--accent);
+    box-shadow: var(--shadow);
+  }
+  section.tab { display: none; }
+  section.tab.active { display: block; }
 
   /* ---------- Buttons ---------- */
   button {
@@ -71,7 +100,7 @@
   .btn-ok:hover { filter: brightness(1.08); }
   .btn-big { font-size: 1.05rem; padding: 12px 22px; }
 
-  /* ---------- Focus banner (the ADHD "what do I do next" answer) ---------- */
+  /* ---------- Focus banner ---------- */
   #focus-banner {
     border-radius: var(--radius);
     padding: 18px 20px;
@@ -85,14 +114,14 @@
   }
   #focus-banner.calm { background: var(--ok-soft); border: 1.5px solid var(--ok); }
   #focus-banner.soon { background: var(--warn-soft); border: 1.5px solid var(--warn); }
-  #focus-banner.urgent { background: var(--danger-soft); border: 1.5px solid var(--danger); }
+  #focus-banner.urgent, #focus-banner.overdue { background: var(--danger-soft); border: 1.5px solid var(--danger); }
   #focus-banner .focus-title { font-size: 1.15rem; font-weight: 700; }
   #focus-banner .focus-sub { color: var(--text-soft); margin-top: 2px; }
 
   /* ---------- Summary stats ---------- */
   .stats-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 14px;
     margin-bottom: 24px;
   }
@@ -129,13 +158,14 @@
     margin-bottom: 14px;
     border-left: 6px solid var(--border);
   }
-  .card-item.urgent { border-left-color: var(--danger); }
+  .card-item.urgent, .card-item.overdue { border-left-color: var(--danger); }
   .card-item.soon { border-left-color: var(--warn); }
   .card-item.calm { border-left-color: var(--ok); }
-  .card-item.paid { border-left-color: var(--ok); opacity: 0.85; }
+  .card-item.paid, .card-item.zero, .card-item.autopay { border-left-color: var(--ok); opacity: 0.9; }
   .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
   .card-name { font-size: 1.12rem; font-weight: 700; }
   .card-meta { color: var(--text-soft); font-size: 0.88rem; }
+  .card-notes { color: var(--text-soft); font-size: 0.85rem; font-style: italic; margin-top: 6px; }
   .due-badge {
     font-weight: 700;
     font-size: 0.92rem;
@@ -143,10 +173,22 @@
     border-radius: 999px;
     white-space: nowrap;
   }
-  .due-badge.urgent { background: var(--danger-soft); color: var(--danger); }
+  .due-badge.urgent, .due-badge.overdue { background: var(--danger-soft); color: var(--danger); }
   .due-badge.soon { background: var(--warn-soft); color: var(--warn); }
-  .due-badge.calm { background: var(--ok-soft); color: var(--ok); }
-  .due-badge.paid { background: var(--ok-soft); color: var(--ok); }
+  .due-badge.calm, .due-badge.paid, .due-badge.zero, .due-badge.autopay { background: var(--ok-soft); color: var(--ok); }
+
+  .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .chip {
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.danger { background: var(--danger-soft); color: var(--danger); }
+  .chip.ok { background: var(--ok-soft); color: var(--ok); }
 
   .card-figures {
     display: grid;
@@ -182,6 +224,72 @@
   }
   .empty-state p { margin-bottom: 14px; font-size: 1.05rem; }
 
+  /* ---------- Panels (planner / trends) ---------- */
+  .panel {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .panel h3 { margin-bottom: 4px; }
+  .panel .panel-sub { color: var(--text-soft); font-size: 0.9rem; margin-bottom: 14px; }
+  .planner-controls { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
+  .planner-controls .form-field { min-width: 200px; }
+  .segmented { display: inline-flex; background: var(--bg); border-radius: 10px; padding: 3px; gap: 2px; }
+  .segmented button { padding: 7px 14px; border-radius: 8px; background: transparent; color: var(--text-soft); font-size: 0.9rem; }
+  .segmented button.active { background: var(--card-bg); color: var(--accent); box-shadow: var(--shadow); }
+  .strategy-hint { font-size: 0.82rem; color: var(--text-soft); margin-top: 6px; max-width: 460px; }
+
+  .plan-note { border-radius: 10px; padding: 10px 14px; margin-top: 14px; font-size: 0.92rem; font-weight: 600; }
+  .plan-note.danger { background: var(--danger-soft); color: var(--danger); }
+  .plan-note.ok { background: var(--ok-soft); color: var(--ok); }
+  .plan-note.info { background: var(--accent-soft); color: var(--accent); }
+
+  .payoff-order { margin-top: 6px; }
+  .payoff-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--border); }
+  .payoff-row:first-child { border-top: none; }
+  .payoff-num {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent);
+    font-weight: 700; font-size: 0.85rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .payoff-name { font-weight: 600; flex: 1; min-width: 120px; }
+  .payoff-when { color: var(--text-soft); font-size: 0.88rem; white-space: nowrap; }
+  .payoff-bar-track { flex: 2; height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; min-width: 80px; }
+  .payoff-bar { height: 100%; background: var(--chart-s1); border-radius: 999px; }
+
+  /* ---------- Chart ---------- */
+  .chart-wrap { position: relative; }
+  .chart-wrap svg { width: 100%; height: auto; display: block; }
+  .chart-legend { display: flex; gap: 18px; margin-bottom: 8px; flex-wrap: wrap; }
+  .chart-legend .li { display: flex; align-items: center; gap: 7px; font-size: 0.86rem; color: var(--text-soft); font-weight: 600; }
+  .chart-legend .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .chart-tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--text);
+    color: var(--card-bg);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    white-space: nowrap;
+    display: none;
+    z-index: 10;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  }
+  .chart-empty { color: var(--text-soft); padding: 24px 0; text-align: center; }
+  details.data-table { margin-top: 12px; }
+  details.data-table summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: 0.88rem; }
+  details.data-table table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.86rem; }
+  details.data-table th, details.data-table td { text-align: left; padding: 6px 10px; }
+  details.data-table th { color: var(--text-soft); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  details.data-table tr + tr td { border-top: 1px solid var(--border); }
+  details.data-table td { font-variant-numeric: tabular-nums; }
+
   /* ---------- Modal ---------- */
   .modal-backdrop {
     position: fixed;
@@ -200,7 +308,7 @@
     border-radius: var(--radius);
     box-shadow: 0 10px 40px rgba(15, 22, 40, 0.25);
     width: 100%;
-    max-width: 520px;
+    max-width: 540px;
     padding: 24px;
   }
   .modal h3 { margin-bottom: 4px; }
@@ -210,7 +318,7 @@
   .form-field.full { grid-column: 1 / -1; }
   .form-field label { font-size: 0.85rem; font-weight: 600; }
   .form-field .field-hint { font-size: 0.78rem; color: var(--text-soft); }
-  .form-field input, .form-field select {
+  .form-field input, .form-field select, .form-field textarea {
     font: inherit;
     padding: 9px 12px;
     border: 1.5px solid var(--border);
@@ -219,11 +327,17 @@
     color: var(--text);
     width: 100%;
   }
-  .form-field input:focus, .form-field select:focus {
+  .form-field input:focus, .form-field select:focus, .form-field textarea:focus {
     outline: none;
     border-color: var(--accent);
     background: #fff;
   }
+  .form-check { display: flex; align-items: center; gap: 10px; grid-column: 1 / -1; }
+  .form-check input { width: 18px; height: 18px; accent-color: var(--accent); }
+  .form-check label { font-weight: 600; font-size: 0.9rem; }
+  details.extras { grid-column: 1 / -1; border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+  details.extras summary { cursor: pointer; font-weight: 600; font-size: 0.9rem; color: var(--accent); }
+  details.extras .form-grid { margin-top: 12px; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
   .form-error { color: var(--danger); font-size: 0.88rem; margin-top: 10px; display: none; }
   .form-error.show { display: block; }
@@ -245,7 +359,7 @@
     left: 50%;
     transform: translateX(-50%) translateY(20px);
     background: var(--text);
-    color: #fff;
+    color: var(--bg);
     padding: 12px 22px;
     border-radius: 999px;
     font-weight: 600;
@@ -255,8 +369,14 @@
     z-index: 200;
     max-width: 90vw;
     text-align: center;
+    display: flex;
+    gap: 14px;
+    align-items: center;
   }
-  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+  #toast button { background: transparent; color: #7b96ff; padding: 0; font-weight: 700; text-decoration: underline; }
+
+  #confetti-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 300; }
 
   .privacy-note {
     margin-top: 34px;
@@ -281,8 +401,11 @@
       --ok-soft: #1c3529;
       --border: #2c3547;
       --shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+      --chart-s1: #3987e5;
+      --chart-s2: #199e70;
+      --chart-grid: #262f40;
     }
-    .form-field input:focus, .form-field select:focus { background: var(--card-bg); }
+    .form-field input:focus, .form-field select:focus, .form-field textarea:focus { background: var(--card-bg); }
   }
 </style>
 </head>
@@ -291,6 +414,7 @@
 <header>
   <h1>💳 CCB<span>Gone</span></h1>
   <div class="header-actions">
+    <button class="btn-quiet" id="btn-calendar" title="Download due-date reminders you can add to your phone or computer calendar">📅 Calendar</button>
     <button class="btn-quiet" id="btn-export" title="Save a backup file of your data to your drive">⬇ Backup</button>
     <button class="btn-quiet" id="btn-import" title="Restore data from a backup file">⬆ Restore</button>
     <input type="file" id="import-file" accept=".json,application/json" hidden>
@@ -298,11 +422,19 @@
   </div>
 </header>
 
+<nav class="tabs">
+  <button data-tab="dashboard" class="active">📋 Dashboard</button>
+  <button data-tab="planner">🎯 Payoff Plan</button>
+  <button data-tab="trends">📈 Trends</button>
+</nav>
+
 <main>
+<!-- ================= DASHBOARD ================= -->
+<section class="tab active" id="tab-dashboard">
   <div id="focus-banner" class="calm" hidden>
     <div>
       <div class="focus-title" id="focus-title"></div>
-    <div class="focus-sub" id="focus-sub"></div>
+      <div class="focus-sub" id="focus-sub"></div>
     </div>
     <button class="btn-ok btn-big" id="focus-pay-btn" hidden>✓ Mark it paid</button>
   </div>
@@ -328,6 +460,11 @@
       <div class="value" id="stat-interest">$0</div>
       <div class="hint">estimated, if balances are carried</div>
     </div>
+    <div class="stat" id="stat-streak-tile" hidden>
+      <div class="label">On-time streak</div>
+      <div class="value good" id="stat-streak">🔥 0</div>
+      <div class="hint">payments logged before their due date</div>
+    </div>
   </div>
 
   <div class="section-head">
@@ -340,12 +477,90 @@
     <button class="btn-quiet" id="btn-toggle-history">Show all</button>
   </div>
   <div id="history-container"></div>
+</section>
 
-  <p class="privacy-note">
-    🔒 All data is stored only in this browser on this computer. Nothing is sent anywhere.
-    Use <strong>Backup</strong> regularly to save a copy to your drive.
-  </p>
+<!-- ================= PAYOFF PLANNER ================= -->
+<section class="tab" id="tab-planner">
+  <div class="panel">
+    <h3>🎯 Your payoff plan</h3>
+    <p class="panel-sub">Tell it what you can afford each month and it maps the whole road out of debt — no spreadsheet required.</p>
+    <div class="planner-controls">
+      <div class="form-field">
+        <label for="plan-budget">Monthly amount for all cards ($)</label>
+        <input id="plan-budget" type="number" min="0" step="1" placeholder="0">
+        <span class="field-hint" id="plan-budget-hint"></span>
+      </div>
+      <div class="form-field">
+        <label>Strategy</label>
+        <div class="segmented" id="strategy-toggle">
+          <button data-strategy="avalanche">🏔 Avalanche</button>
+          <button data-strategy="snowball">☃️ Snowball</button>
+        </div>
+        <span class="strategy-hint" id="strategy-hint"></span>
+      </div>
+    </div>
+    <div id="plan-notes"></div>
+  </div>
+  <div class="stats-row" id="plan-stats" hidden>
+    <div class="stat">
+      <div class="label">Debt-free date</div>
+      <div class="value good" id="plan-free-date">—</div>
+      <div class="hint" id="plan-free-months"></div>
+    </div>
+    <div class="stat">
+      <div class="label">Interest you'll pay</div>
+      <div class="value" id="plan-interest">—</div>
+      <div class="hint">on this plan, total</div>
+    </div>
+    <div class="stat">
+      <div class="label">Saved vs minimums only</div>
+      <div class="value good" id="plan-saved">—</div>
+      <div class="hint" id="plan-saved-hint"></div>
+    </div>
+  </div>
+  <div class="panel" id="payoff-order-panel" hidden>
+    <h3>Payoff order</h3>
+    <p class="panel-sub">Every card gets its minimum. All extra money attacks one card at a time, in this order:</p>
+    <div class="payoff-order" id="payoff-order"></div>
+  </div>
+  <div class="panel" id="plan-chart-panel" hidden>
+    <h3>Projected total balance</h3>
+    <p class="panel-sub">Your plan vs. paying only the minimums.</p>
+    <div id="plan-chart"></div>
+  </div>
+</section>
+
+<!-- ================= TRENDS ================= -->
+<section class="tab" id="tab-trends">
+  <div class="stats-row" id="trend-stats" hidden>
+    <div class="stat">
+      <div class="label">Balance now</div>
+      <div class="value" id="trend-now">$0</div>
+      <div class="hint" id="trend-now-hint"></div>
+    </div>
+    <div class="stat">
+      <div class="label">Change, last 30 days</div>
+      <div class="value" id="trend-delta">—</div>
+      <div class="hint" id="trend-delta-hint"></div>
+    </div>
+    <div class="stat">
+      <div class="label">Paid in, last 30 days</div>
+      <div class="value good" id="trend-paid">$0</div>
+      <div class="hint">payments you logged</div>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>Total balance over time</h3>
+    <p class="panel-sub">Built from the payments and balance updates you log — the longer you use the app, the more this fills in.</p>
+    <div id="trend-chart"></div>
+  </div>
+</section>
 </main>
+
+<p class="privacy-note">
+  🔒 All data is stored only in this browser on this computer. Nothing is sent anywhere.
+  Use <strong>Backup</strong> regularly to save a copy to your drive.
+</p>
 
 <!-- Add / Edit card modal -->
 <div class="modal-backdrop" id="card-modal">
@@ -384,6 +599,38 @@
           <label for="f-min">Minimum payment ($) *</label>
           <input id="f-min" type="number" min="0" step="0.01" required placeholder="35">
         </div>
+        <div class="form-check">
+          <input type="checkbox" id="f-autopay">
+          <label for="f-autopay">⚡ Autopay is set up for this card (won't nag you about it)</label>
+        </div>
+        <details class="extras" id="f-extras">
+          <summary>More options: 0% intro APR, annual fee, notes</summary>
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="f-promo-rate">Intro APR (%)</label>
+              <input id="f-promo-rate" type="number" min="0" max="100" step="0.01" placeholder="0">
+            </div>
+            <div class="form-field">
+              <label for="f-promo-end">Intro APR ends</label>
+              <input id="f-promo-end" type="date">
+              <span class="field-hint">You'll get a warning before it expires</span>
+            </div>
+            <div class="form-field">
+              <label for="f-fee">Annual fee ($)</label>
+              <input id="f-fee" type="number" min="0" step="0.01" placeholder="95">
+            </div>
+            <div class="form-field">
+              <label for="f-fee-month">Fee charged in</label>
+              <select id="f-fee-month">
+                <option value="">—</option>
+              </select>
+            </div>
+            <div class="form-field full">
+              <label for="f-notes">Notes</label>
+              <textarea id="f-notes" rows="2" maxlength="300" placeholder="e.g. only for gas + groceries, call to ask for lower APR in June"></textarea>
+            </div>
+          </div>
+        </details>
       </div>
       <p class="form-error" id="card-form-error"></p>
       <div class="modal-actions">
@@ -425,28 +672,53 @@
 "use strict";
 
 /* =====================================================
-   Storage
+   Storage & migration
    ===================================================== */
 const STORE_KEY = "ccbgone.v1";
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+function freshState() {
+  return {
+    version: 2,
+    cards: [],
+    history: [],
+    settings: { budget: null, strategy: "avalanche" },
+    stats: { onTimeStreak: 0 },
+  };
+}
+
+function migrate(data) {
+  if (!data || !Array.isArray(data.cards) || !Array.isArray(data.history)) throw new Error("bad shape");
+  data.version = 2;
+  data.settings = Object.assign({ budget: null, strategy: "avalanche" }, data.settings);
+  data.stats = Object.assign({ onTimeStreak: 0 }, data.stats);
+  const today = todayISO();
+  for (const c of data.cards) {
+    c.createdAt = c.createdAt || today;
+    c.autopay = !!c.autopay;
+    c.promoRate = c.promoRate == null ? null : c.promoRate;
+    c.promoEnd = c.promoEnd || null;
+    c.annualFee = c.annualFee == null ? null : c.annualFee;
+    c.annualFeeMonth = c.annualFeeMonth == null ? null : c.annualFeeMonth;
+    c.notes = c.notes || "";
+  }
+  return data;
+}
 
 function loadState() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (!raw) return { cards: [], history: [] };
-    const data = JSON.parse(raw);
-    if (!Array.isArray(data.cards) || !Array.isArray(data.history)) throw new Error("bad shape");
-    return data;
+    if (!raw) return freshState();
+    return migrate(JSON.parse(raw));
   } catch (e) {
     console.warn("Could not read saved data:", e);
-    return { cards: [], history: [] };
+    return freshState();
   }
 }
 
 function saveState() {
   localStorage.setItem(STORE_KEY, JSON.stringify(state));
 }
-
-let state = loadState();
 
 /* =====================================================
    Helpers
@@ -457,7 +729,9 @@ const fmtMoney = (n) =>
   (n < 0 ? "-$" : "$") + Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const fmtMoneyShort = (n) =>
-  "$" + Math.abs(n).toLocaleString("en-US", { maximumFractionDigits: 0 });
+  (n < 0 ? "-$" : "$") + Math.abs(n).toLocaleString("en-US", { maximumFractionDigits: 0 });
+
+const fmtMonthYear = (d) => d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 
 function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -468,18 +742,50 @@ function todayISO() {
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 }
 
-/* Cycle key = the month of the card's NEXT due date, e.g. "2026-07".
-   "Paid" is tracked per cycle so it resets automatically each month. */
+function parseISODate(s) {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function escapeHTML(s) {
+  return String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+}
+
+let toastTimer = null;
+function toast(msg, actionLabel, actionFn) {
+  const t = $("toast");
+  t.innerHTML = escapeHTML(msg);
+  if (actionLabel) {
+    const b = document.createElement("button");
+    b.textContent = actionLabel;
+    b.onclick = () => { t.classList.remove("show"); actionFn(); };
+    t.appendChild(b);
+  }
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), actionLabel ? 6000 : 2600);
+}
+
+/* =====================================================
+   Due-date & status logic
+   ===================================================== */
+function clampDay(y, m, day) {
+  return Math.min(day, new Date(y, m + 1, 0).getDate());
+}
+
 function nextDueDate(dueDay) {
   const now = new Date();
   const y = now.getFullYear(), m = now.getMonth();
-  const clamp = (yy, mm) => Math.min(dueDay, new Date(yy, mm + 1, 0).getDate());
-  let due = new Date(y, m, clamp(y, m));
+  let due = new Date(y, m, clampDay(y, m, dueDay));
   const todayMid = new Date(y, m, now.getDate());
-  if (due < todayMid) {
-    due = new Date(y, m + 1, clamp(y, m + 1));
-  }
+  if (due < todayMid) due = new Date(y, m + 1, clampDay(y, m + 1, dueDay));
   return due;
+}
+
+function prevDueDate(dueDay) {
+  const next = nextDueDate(dueDay);
+  const y = next.getFullYear(), m = next.getMonth() - 1;
+  return new Date(y, m, clampDay(y, m, dueDay));
 }
 
 function cycleKeyFor(dueDate) {
@@ -492,19 +798,48 @@ function daysUntil(date) {
   return Math.round((date - a) / 86400000);
 }
 
+const OVERDUE_GRACE_DAYS = 15;
+
+/* Status levels: overdue > urgent > soon > calm; paid / autopay / zero are "handled". */
 function cardStatus(card) {
   const due = nextDueDate(card.dueDay);
   const days = daysUntil(due);
   const cycle = cycleKeyFor(due);
   const paid = card.paidCycle === cycle;
-  let level = "calm";
-  if (!paid) {
-    if (days <= 3) level = "urgent";
-    else if (days <= 7) level = "soon";
-  } else {
-    level = "paid";
-  }
-  return { due, days, cycle, paid, level };
+
+  // Overdue: the previous due date passed unpaid (and the card existed then).
+  const prev = prevDueDate(card.dueDay);
+  const prevCycle = cycleKeyFor(prev);
+  const daysLate = -daysUntil(prev);
+  const overdue = !card.autopay && card.balance > 0 && !paid &&
+    card.paidCycle !== prevCycle &&
+    daysLate > 0 && daysLate <= OVERDUE_GRACE_DAYS &&
+    parseISODate(card.createdAt) <= prev;
+
+  let level;
+  if (card.balance <= 0) level = "zero";
+  else if (card.autopay) level = "autopay";
+  else if (overdue) level = "overdue";
+  else if (paid) level = "paid";
+  else if (days <= 3) level = "urgent";
+  else if (days <= 7) level = "soon";
+  else level = "calm";
+
+  const handled = level === "zero" || level === "autopay" || level === "paid";
+  // Which cycle "mark paid" should stamp: the overdue one if overdue, else the upcoming one.
+  const payCycle = overdue ? prevCycle : cycle;
+  return { due, days, cycle, paid, overdue, daysLate, level, handled, payCycle, prev };
+}
+
+function effectiveApr(card) {
+  if (card.promoRate != null && card.promoEnd && parseISODate(card.promoEnd) >= new Date()) return card.promoRate;
+  return card.apr;
+}
+
+function promoDaysLeft(card) {
+  if (card.promoRate == null || !card.promoEnd) return null;
+  const d = daysUntil(parseISODate(card.promoEnd));
+  return d >= 0 ? d : null;
 }
 
 function utilization(card) {
@@ -519,7 +854,7 @@ function utilClass(pct) {
 }
 
 function monthlyInterest(card) {
-  return card.balance * (card.apr / 100) / 12;
+  return card.balance * (effectiveApr(card) / 100) / 12;
 }
 
 function dueDateLabel(due, days) {
@@ -529,13 +864,29 @@ function dueDateLabel(due, days) {
   return "Due in " + days + " days (" + dateStr + ")";
 }
 
-let toastTimer = null;
-function toast(msg) {
-  const t = $("toast");
-  t.textContent = msg;
-  t.classList.add("show");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+/* "Caught up" = nothing overdue and nothing unpaid due within a week.
+   A card due weeks from now shouldn't block the celebration. */
+function allCaughtUp() {
+  return state.cards.length > 0 &&
+    state.cards.every((c) => !["overdue", "urgent", "soon"].includes(cardStatus(c).level));
+}
+
+let state = loadState();
+saveState(); // persist any migration immediately
+
+/* =====================================================
+   Tabs
+   ===================================================== */
+document.querySelectorAll("nav.tabs button").forEach((btn) => {
+  btn.onclick = () => {
+    document.querySelectorAll("nav.tabs button").forEach((b) => b.classList.toggle("active", b === btn));
+    document.querySelectorAll("section.tab").forEach((s) => s.classList.toggle("active", s.id === "tab-" + btn.dataset.tab));
+    render();
+  };
+});
+
+function activeTab() {
+  return document.querySelector("nav.tabs button.active").dataset.tab;
 }
 
 /* =====================================================
@@ -546,6 +897,8 @@ function render() {
   renderStats();
   renderCards();
   renderHistory();
+  if (activeTab() === "planner") renderPlanner();
+  if (activeTab() === "trends") renderTrends();
 }
 
 function renderFocus() {
@@ -553,27 +906,35 @@ function renderFocus() {
   if (state.cards.length === 0) { banner.hidden = true; return; }
   banner.hidden = false;
 
-  const unpaid = state.cards
+  const actionable = state.cards
     .map((c) => ({ card: c, st: cardStatus(c) }))
-    .filter((x) => !x.st.paid)
-    .sort((a, b) => a.st.days - b.st.days);
+    .filter((x) => !x.st.handled)
+    .sort((a, b) => (a.st.overdue !== b.st.overdue) ? (a.st.overdue ? -1 : 1) : a.st.days - b.st.days);
 
   const payBtn = $("focus-pay-btn");
-  if (unpaid.length === 0) {
+  if (actionable.length === 0) {
     banner.className = "calm";
     $("focus-title").textContent = "🎉 All caught up!";
-    $("focus-sub").textContent = "Every card is marked paid for this cycle. Nothing to do right now.";
+    $("focus-sub").textContent = "Every card is handled for this cycle. Nothing to do right now.";
     payBtn.hidden = true;
     return;
   }
 
-  const next = unpaid[0];
-  banner.className = next.st.level === "calm" ? "calm" : next.st.level;
+  const next = actionable[0];
   const amount = Math.min(next.card.minPayment, next.card.balance) || next.card.minPayment;
-  $("focus-title").textContent = "Next up: pay " + next.card.name + " — " + dueDateLabel(next.st.due, next.st.days);
-  $("focus-sub").textContent =
-    "Minimum payment " + fmtMoney(amount) +
-    (unpaid.length > 1 ? " · " + (unpaid.length - 1) + " more card" + (unpaid.length > 2 ? "s" : "") + " after this one" : " · last one this cycle");
+  if (next.st.overdue) {
+    banner.className = "overdue";
+    $("focus-title").textContent = "⚠ OVERDUE: " + next.card.name + " was due " +
+      next.st.prev.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
+      " (" + next.st.daysLate + " day" + (next.st.daysLate > 1 ? "s" : "") + " ago)";
+    $("focus-sub").textContent = "Pay at least the " + fmtMoney(amount) + " minimum now — paying even a day late beats another day of late fees. Then mark it paid here.";
+  } else {
+    banner.className = next.st.level === "calm" ? "calm" : next.st.level;
+    $("focus-title").textContent = "Next up: pay " + next.card.name + " — " + dueDateLabel(next.st.due, next.st.days);
+    $("focus-sub").textContent =
+      "Minimum payment " + fmtMoney(amount) +
+      (actionable.length > 1 ? " · " + (actionable.length - 1) + " more card" + (actionable.length > 2 ? "s" : "") + " after this one" : " · last one this cycle");
+  }
   payBtn.hidden = false;
   payBtn.onclick = () => openPayModal(next.card.id, "payment", true);
 }
@@ -586,8 +947,8 @@ function renderStats() {
   const totalBalance = state.cards.reduce((s, c) => s + c.balance, 0);
   const totalLimit = state.cards.reduce((s, c) => s + c.limit, 0);
   const util = totalLimit ? (totalBalance / totalLimit) * 100 : 0;
-  const unpaid = state.cards.filter((c) => !cardStatus(c).paid);
-  const minDue = unpaid.reduce((s, c) => s + Math.min(c.minPayment, Math.max(c.balance, 0) || c.minPayment), 0);
+  const owing = state.cards.filter((c) => !cardStatus(c).handled);
+  const minDue = owing.reduce((s, c) => s + (Math.min(c.minPayment, c.balance) || c.minPayment), 0);
   const interest = state.cards.reduce((s, c) => s + monthlyInterest(c), 0);
 
   $("stat-balance").textContent = fmtMoneyShort(totalBalance);
@@ -598,11 +959,46 @@ function renderStats() {
   utilEl.className = "value " + utilClass(util);
 
   $("stat-min").textContent = fmtMoneyShort(minDue);
-  $("stat-min-hint").textContent = unpaid.length === 0
-    ? "all paid this cycle 🎉"
-    : "across " + unpaid.length + " unpaid card" + (unpaid.length > 1 ? "s" : "");
+  $("stat-min-hint").textContent = owing.length === 0
+    ? "all handled this cycle 🎉"
+    : "across " + owing.length + " unpaid card" + (owing.length > 1 ? "s" : "");
 
   $("stat-interest").textContent = fmtMoneyShort(interest);
+
+  const streak = state.stats.onTimeStreak;
+  $("stat-streak-tile").hidden = streak < 2;
+  $("stat-streak").textContent = "🔥 " + streak;
+}
+
+function statusBadge(card, st) {
+  switch (st.level) {
+    case "overdue": return '<span class="due-badge overdue">⚠ OVERDUE ' + st.daysLate + "d</span>";
+    case "paid": return '<span class="due-badge paid">✓ Paid this cycle</span>';
+    case "zero": return '<span class="due-badge zero">💤 No balance</span>';
+    case "autopay": return '<span class="due-badge autopay">⚡ Autopay · ' + st.due.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + "</span>";
+    default: return '<span class="due-badge ' + st.level + '">' + dueDateLabel(st.due, st.days) + "</span>";
+  }
+}
+
+function cardChips(card) {
+  const chips = [];
+  const promoLeft = promoDaysLeft(card);
+  if (promoLeft != null) {
+    const endStr = parseISODate(card.promoEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    if (promoLeft <= 45) {
+      chips.push('<span class="chip danger">⏳ ' + card.promoRate + "% intro APR ends in " + promoLeft + "d → " + card.apr.toFixed(2) + "% after</span>");
+    } else {
+      chips.push('<span class="chip">' + card.promoRate + "% intro APR until " + endStr + "</span>");
+    }
+  }
+  if (card.annualFee != null && card.annualFee > 0 && card.annualFeeMonth) {
+    const nowM = new Date().getMonth() + 1;
+    const label = "Annual fee " + fmtMoneyShort(card.annualFee) + " in " + MONTH_NAMES[card.annualFeeMonth - 1];
+    if (card.annualFeeMonth === nowM) chips.push('<span class="chip warn">💸 ' + label + " — that's this month</span>");
+    else if (card.annualFeeMonth === (nowM % 12) + 1) chips.push('<span class="chip warn">💸 ' + label + " — next month</span>");
+    else chips.push('<span class="chip">💸 ' + label + "</span>");
+  }
+  return chips.length ? '<div class="chip-row">' + chips.join("") + "</div>" : "";
 }
 
 function renderCards() {
@@ -621,9 +1017,10 @@ function renderCards() {
 
   $("cards-heading").textContent = "Your cards (" + state.cards.length + ")";
 
+  const rank = { overdue: 0, urgent: 1, soon: 2, calm: 3, paid: 4, autopay: 5, zero: 6 };
   const sorted = [...state.cards]
     .map((c) => ({ card: c, st: cardStatus(c) }))
-    .sort((a, b) => (a.st.paid === b.st.paid ? a.st.days - b.st.days : a.st.paid ? 1 : -1));
+    .sort((a, b) => (rank[a.st.level] - rank[b.st.level]) || (a.st.days - b.st.days));
 
   for (const { card, st } of sorted) {
     const pct = utilization(card);
@@ -631,17 +1028,22 @@ function renderCards() {
     const el = document.createElement("div");
     el.className = "card-item " + st.level;
 
-    const badge = st.paid
-      ? '<span class="due-badge paid">✓ Paid this cycle</span>'
-      : '<span class="due-badge ' + st.level + '">' + dueDateLabel(st.due, st.days) + "</span>";
+    const apr = effectiveApr(card);
+    const aprLabel = apr !== card.apr ? apr.toFixed(2) + "% APR (intro)" : card.apr.toFixed(2) + "% APR";
+    let utilCaption = pct.toFixed(0) + "% of limit used";
+    if (pct > 30) {
+      const toThirty = card.balance - 0.30 * card.limit;
+      utilCaption += " — pay " + fmtMoneyShort(toThirty) + " to get under 30% and help your score";
+    }
 
     el.innerHTML =
       '<div class="card-top">' +
         "<div>" +
           '<div class="card-name">' + escapeHTML(card.name) + "</div>" +
-          '<div class="card-meta">' + (card.last4 ? "•••• " + escapeHTML(card.last4) + " · " : "") + card.apr.toFixed(2) + "% APR</div>" +
-        "</div>" + badge +
+          '<div class="card-meta">' + (card.last4 ? "•••• " + escapeHTML(card.last4) + " · " : "") + aprLabel + "</div>" +
+        "</div>" + statusBadge(card, st) +
       "</div>" +
+      cardChips(card) +
       '<div class="card-figures">' +
         '<div class="fig"><div class="fig-label">Balance</div><div class="fig-value">' + fmtMoney(card.balance) + "</div></div>" +
         '<div class="fig"><div class="fig-label">Limit</div><div class="fig-value">' + fmtMoney(card.limit) + "</div></div>" +
@@ -649,9 +1051,10 @@ function renderCards() {
         '<div class="fig"><div class="fig-label">Interest / mo</div><div class="fig-value">' + fmtMoney(monthlyInterest(card)) + "</div></div>" +
       "</div>" +
       '<div class="util-track"><div class="util-fill ' + uc + '" style="width:' + Math.min(pct, 100) + '%"></div></div>' +
-      '<div class="util-caption">' + pct.toFixed(0) + "% of limit used" + (pct >= 30 ? " — paying it below 30% helps your score" : "") + "</div>" +
+      '<div class="util-caption">' + utilCaption + "</div>" +
+      (card.notes ? '<div class="card-notes">📝 ' + escapeHTML(card.notes) + "</div>" : "") +
       '<div class="card-actions">' +
-        (st.paid ? "" : '<button class="btn-ok" data-act="pay">✓ Log payment</button>') +
+        (st.handled && !st.overdue && st.level !== "autopay" ? "" : '<button class="btn-ok" data-act="pay">✓ Log payment</button>') +
         '<button class="btn-ghost" data-act="balance">Update balance</button>' +
         '<button class="btn-quiet" data-act="edit">Edit</button>' +
         '<button class="btn-quiet" data-act="delete">Delete</button>' +
@@ -695,7 +1098,8 @@ function renderHistory() {
     if (h.type === "payment") {
       rows += "<tr><td>" + dateStr + "</td><td>" + escapeHTML(cardName) + '</td><td>Payment</td><td class="amount-payment">−' + fmtMoney(h.amount).slice(1) + "</td></tr>";
     } else {
-      rows += "<tr><td>" + dateStr + "</td><td>" + escapeHTML(cardName) + '</td><td>Balance update</td><td class="amount-balance">' + fmtMoney(h.amount) + "</td></tr>";
+      const what = h.note === "added" ? "Card added" : h.note === "edited" ? "Balance corrected" : "Balance update";
+      rows += "<tr><td>" + dateStr + "</td><td>" + escapeHTML(cardName) + "</td><td>" + what + '</td><td class="amount-balance">' + fmtMoney(h.amount) + "</td></tr>";
     }
   }
 
@@ -705,8 +1109,405 @@ function renderHistory() {
     "<tbody>" + rows + "</tbody></table></div>";
 }
 
-function escapeHTML(s) {
-  return String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+/* =====================================================
+   Payoff simulator
+   ===================================================== */
+const SIM_CAP_MONTHS = 600;
+
+/* Simulate monthly payoff. budget: total $/month across all cards.
+   strategy: 'avalanche' (highest APR first) | 'snowball' (smallest balance first) | 'min-only'.
+   In min-only, each card pays only its own minimum (freed money is NOT redirected). */
+function simulate(budget, strategy) {
+  const now = new Date();
+  const cards = state.cards
+    .filter((c) => c.balance > 0)
+    .map((c) => ({
+      id: c.id, name: c.name, bal: c.balance, apr: c.apr, min: c.minPayment,
+      promoRate: c.promoRate, promoMonths: (c.promoRate != null && c.promoEnd)
+        ? Math.max(0, Math.ceil((parseISODate(c.promoEnd) - now) / (30.44 * 86400000)))
+        : 0,
+    }));
+  const series = [{ t: 0, v: cards.reduce((s, c) => s + c.bal, 0) }];
+  const payoffMonth = {};
+  let totalInterest = 0;
+  let month = 0;
+  let stalled = false;
+
+  while (cards.some((c) => c.bal > 0.005) && month < SIM_CAP_MONTHS) {
+    month++;
+    const startTotal = cards.reduce((s, c) => s + c.bal, 0);
+    // 1. Interest accrues
+    for (const c of cards) {
+      if (c.bal <= 0) continue;
+      const rate = month <= c.promoMonths ? c.promoRate : c.apr;
+      const i = c.bal * (rate / 100) / 12;
+      c.bal += i;
+      totalInterest += i;
+    }
+    // 2. Payments
+    if (strategy === "min-only") {
+      for (const c of cards) {
+        if (c.bal <= 0) continue;
+        c.bal = Math.max(0, c.bal - Math.max(c.min, 15));
+      }
+    } else {
+      let pool = budget;
+      const active = cards.filter((c) => c.bal > 0);
+      // minimums first
+      for (const c of active) {
+        const pay = Math.min(c.min, c.bal, pool);
+        c.bal -= pay;
+        pool -= pay;
+      }
+      // extra to the target card
+      const order = [...active].sort((a, b) =>
+        strategy === "avalanche"
+          ? (month <= b.promoMonths ? b.promoRate : b.apr) - (month <= a.promoMonths ? a.promoRate : a.apr) || a.bal - b.bal
+          : a.bal - b.bal);
+      for (const c of order) {
+        if (pool <= 0) break;
+        if (c.bal <= 0) continue;
+        const pay = Math.min(c.bal, pool);
+        c.bal -= pay;
+        pool -= pay;
+      }
+    }
+    for (const c of cards) {
+      if (c.bal <= 0.005 && payoffMonth[c.id] == null) { c.bal = 0; payoffMonth[c.id] = month; }
+    }
+    const endTotal = cards.reduce((s, c) => s + c.bal, 0);
+    series.push({ t: month, v: endTotal });
+    if (endTotal >= startTotal - 0.01) stalled = true; // debt not shrinking
+  }
+
+  const done = cards.every((c) => c.bal <= 0.005);
+  return { months: month, done, stalled: stalled && !done, totalInterest, series, payoffMonth };
+}
+
+function monthToDate(m) {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() + m, 1);
+}
+
+function renderPlanner() {
+  const debtCards = state.cards.filter((c) => c.balance > 0);
+  const totalMins = debtCards.reduce((s, c) => s + Math.max(Math.min(c.minPayment, c.balance), 0), 0);
+  const budgetInput = $("plan-budget");
+  const notes = $("plan-notes");
+  const strategy = state.settings.strategy;
+
+  document.querySelectorAll("#strategy-toggle button").forEach((b) =>
+    b.classList.toggle("active", b.dataset.strategy === strategy));
+  $("strategy-hint").textContent = strategy === "avalanche"
+    ? "Avalanche: attack the highest interest rate first. Cheapest way out — saves the most money."
+    : "Snowball: attack the smallest balance first. Fastest wins — great for motivation.";
+
+  if (debtCards.length === 0) {
+    $("plan-stats").hidden = true;
+    $("payoff-order-panel").hidden = true;
+    $("plan-chart-panel").hidden = true;
+    $("plan-budget-hint").textContent = "";
+    notes.innerHTML = state.cards.length === 0
+      ? '<div class="plan-note info">Add your cards on the Dashboard first, then plan your payoff here.</div>'
+      : '<div class="plan-note ok">🎉 Every balance is at $0. There is nothing to plan — you did it.</div>';
+    return;
+  }
+
+  $("plan-budget-hint").textContent = "Your minimums add up to " + fmtMoney(totalMins) + "/month — anything above that speeds things up a lot.";
+  if (budgetInput.value === "" && state.settings.budget != null) budgetInput.value = state.settings.budget;
+
+  const budget = parseFloat(budgetInput.value);
+  if (!(budget > 0)) {
+    $("plan-stats").hidden = true;
+    $("payoff-order-panel").hidden = true;
+    $("plan-chart-panel").hidden = true;
+    notes.innerHTML = '<div class="plan-note info">👆 Enter a monthly amount to see your debt-free date. Even ' + fmtMoneyShort(totalMins + 50) + ' makes a visible difference.</div>';
+    return;
+  }
+
+  let noteHTML = "";
+  if (budget < totalMins) {
+    noteHTML += '<div class="plan-note danger">⚠ That\'s below your combined minimums (' + fmtMoney(totalMins) + '). Minimums come first — the plan below assumes you at least cover them.</div>';
+  }
+
+  const plan = simulate(Math.max(budget, totalMins), strategy);
+  const minOnly = simulate(0, "min-only");
+  const other = simulate(Math.max(budget, totalMins), strategy === "avalanche" ? "snowball" : "avalanche");
+
+  if (plan.stalled || !plan.done) {
+    noteHTML += '<div class="plan-note danger">⚠ At this amount the balances barely shrink (or grow) because of interest. Every extra dollar per month matters here — even $25 more changes the picture.</div>';
+    notes.innerHTML = noteHTML;
+    $("plan-stats").hidden = true;
+    $("payoff-order-panel").hidden = true;
+    $("plan-chart-panel").hidden = true;
+    return;
+  }
+
+  // Stats
+  $("plan-stats").hidden = false;
+  const freeDate = monthToDate(plan.months);
+  $("plan-free-date").textContent = fmtMonthYear(freeDate);
+  const yrs = Math.floor(plan.months / 12), mos = plan.months % 12;
+  $("plan-free-months").textContent = (yrs ? yrs + " yr " : "") + mos + " mo from now";
+  $("plan-interest").textContent = fmtMoneyShort(plan.totalInterest);
+
+  if (!minOnly.done) {
+    $("plan-saved").textContent = "∞";
+    $("plan-saved-hint").textContent = "minimums alone would never pay this off";
+  } else {
+    const saved = minOnly.totalInterest - plan.totalInterest;
+    const monthsSaved = minOnly.months - plan.months;
+    $("plan-saved").textContent = fmtMoneyShort(Math.max(saved, 0));
+    $("plan-saved-hint").textContent = "and debt-free " + Math.max(monthsSaved, 0) + " months sooner";
+  }
+
+  // Strategy comparison
+  const diff = other.totalInterest - plan.totalInterest;
+  if (plan.done && other.done && Math.abs(diff) >= 1) {
+    if (diff > 0) {
+      noteHTML += '<div class="plan-note ok">✓ Good choice — ' + strategy + " saves " + fmtMoneyShort(diff) + " vs " + (strategy === "avalanche" ? "snowball" : "avalanche") + " here.</div>";
+    } else {
+      noteHTML += '<div class="plan-note info">💡 Heads up: switching to ' + (strategy === "avalanche" ? "snowball" : "avalanche") + " would save " + fmtMoneyShort(-diff) + " in interest. (Sticking with what keeps you motivated is also a valid strategy.)</div>";
+    }
+  }
+  notes.innerHTML = noteHTML;
+
+  // Payoff order
+  $("payoff-order-panel").hidden = false;
+  const orderEl = $("payoff-order");
+  const ordered = debtCards
+    .map((c) => ({ card: c, m: plan.payoffMonth[c.id] || plan.months }))
+    .sort((a, b) => a.m - b.m);
+  orderEl.innerHTML = ordered.map((o, i) =>
+    '<div class="payoff-row">' +
+      '<div class="payoff-num">' + (i + 1) + "</div>" +
+      '<div class="payoff-name">' + escapeHTML(o.card.name) + "</div>" +
+      '<div class="payoff-bar-track"><div class="payoff-bar" style="width:' + Math.max(6, (o.m / plan.months) * 100) + '%"></div></div>' +
+      '<div class="payoff-when">paid off ' + fmtMonthYear(monthToDate(o.m)) + "</div>" +
+    "</div>").join("");
+
+  // Chart: plan vs minimums-only
+  $("plan-chart-panel").hidden = false;
+  const series = [{ name: "Your plan", color: "var(--chart-s1)", points: plan.series.map((p) => ({ t: p.t, v: p.v })) }];
+  if (minOnly.series.length > 1) {
+    // Don't let a slow (or runaway) minimums-only line stretch the chart into
+    // absurdity — show it over at most twice the plan's timeline.
+    const windowMonths = Math.max(plan.months * 2, 24);
+    const minPts = minOnly.series.filter((p) => p.t <= windowMonths);
+    const minName = !minOnly.done ? "Minimums only (never pays off)"
+      : minOnly.months > windowMonths ? "Minimums only (" + Math.round(minOnly.months / 12) + "+ years)"
+      : "Minimums only";
+    series.push({ name: minName, color: "var(--chart-s2)", points: minPts.map((p) => ({ t: p.t, v: p.v })) });
+  }
+  lineChart($("plan-chart"), {
+    series,
+    xLabel: (t) => fmtMonthYear(monthToDate(t)),
+    tableCaption: "See the month-by-month numbers",
+  });
+}
+
+$("plan-budget").addEventListener("input", () => {
+  const v = parseFloat($("plan-budget").value);
+  state.settings.budget = isNaN(v) ? null : v;
+  saveState();
+  renderPlanner();
+});
+
+document.querySelectorAll("#strategy-toggle button").forEach((b) => {
+  b.onclick = () => {
+    state.settings.strategy = b.dataset.strategy;
+    saveState();
+    renderPlanner();
+  };
+});
+
+/* =====================================================
+   Trends
+   ===================================================== */
+/* Rebuild total-balance-over-time from history entries that carry balanceAfter. */
+function totalBalanceSeries() {
+  const entries = state.history
+    .filter((h) => h.balanceAfter != null)
+    .sort((a, b) => (a.date + a.ts).localeCompare(b.date + b.ts));
+  const bal = {};
+  const raw = [];
+  for (const h of entries) {
+    bal[h.cardId] = h.balanceAfter;
+    raw.push({ date: h.date, v: Object.values(bal).reduce((s, x) => s + x, 0) });
+  }
+  // one point per day (last of the day)
+  const byDay = new Map();
+  for (const p of raw) byDay.set(p.date, p.v);
+  const points = [...byDay.entries()].map(([date, v]) => ({ t: parseISODate(date).getTime(), v }));
+  // always end at "now" with the real current total
+  const nowTotal = state.cards.reduce((s, c) => s + c.balance, 0);
+  const today = parseISODate(todayISO()).getTime();
+  if (points.length === 0 || points[points.length - 1].t < today) points.push({ t: today, v: nowTotal });
+  else points[points.length - 1] = { t: today, v: nowTotal };
+  return points;
+}
+
+function renderTrends() {
+  const points = totalBalanceSeries();
+  const statsEl = $("trend-stats");
+  const chartEl = $("trend-chart");
+
+  if (state.cards.length === 0) {
+    statsEl.hidden = true;
+    chartEl.innerHTML = '<div class="chart-empty">Add your cards on the Dashboard and your balance history will start building here.</div>';
+    return;
+  }
+
+  statsEl.hidden = false;
+  const nowTotal = state.cards.reduce((s, c) => s + c.balance, 0);
+  $("trend-now").textContent = fmtMoneyShort(nowTotal);
+  $("trend-now-hint").textContent = "across " + state.cards.length + " card" + (state.cards.length > 1 ? "s" : "");
+
+  // 30-day delta: nearest point at least 30 days back
+  const cutoff = Date.now() - 30 * 86400000;
+  const past = [...points].reverse().find((p) => p.t <= cutoff);
+  const deltaEl = $("trend-delta");
+  if (past) {
+    const d = nowTotal - past.v;
+    deltaEl.textContent = (d <= 0 ? "↓ " : "↑ ") + fmtMoneyShort(Math.abs(d));
+    deltaEl.className = "value " + (d <= 0 ? "good" : "bad");
+    $("trend-delta-hint").textContent = d <= 0 ? "keep that going 💪" : "balances went up — no shame, just information";
+  } else {
+    deltaEl.textContent = "—";
+    deltaEl.className = "value";
+    $("trend-delta-hint").textContent = "needs ~30 days of logging to show";
+  }
+
+  const paid30 = state.history
+    .filter((h) => h.type === "payment" && parseISODate(h.date).getTime() >= cutoff)
+    .reduce((s, h) => s + h.amount, 0);
+  $("trend-paid").textContent = fmtMoneyShort(paid30);
+
+  if (points.length < 2) {
+    chartEl.innerHTML = '<div class="chart-empty">📈 Not enough history yet — log payments and balance updates and this chart appears on its own. Come back in a few days!</div>';
+    return;
+  }
+
+  lineChart(chartEl, {
+    series: [{ name: "Total balance", color: "var(--chart-s1)", points }],
+    xLabel: (t) => new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    tableCaption: "See the numbers",
+  });
+}
+
+/* =====================================================
+   Line chart (SVG, hover crosshair + tooltip, no libraries)
+   ===================================================== */
+function niceCeil(v) {
+  const pow = Math.pow(10, Math.floor(Math.log10(v)));
+  const f = v / pow;
+  const nice = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 4 ? 4 : f <= 5 ? 5 : f <= 8 ? 8 : 10;
+  return nice * pow;
+}
+
+function lineChart(container, opts) {
+  const W = 720, H = 260, padL = 58, padR = 14, padT = 14, padB = 30;
+  const series = opts.series.filter((s) => s.points.length > 0);
+  if (series.length === 0) { container.innerHTML = '<div class="chart-empty">No data yet.</div>'; return; }
+
+  const allT = series.flatMap((s) => s.points.map((p) => p.t));
+  const allV = series.flatMap((s) => s.points.map((p) => p.v));
+  const tMin = Math.min(...allT), tMax = Math.max(...allT);
+  const vMax = niceCeil(Math.max(...allV, 1) * 1.06);
+  const x = (t) => tMax === tMin ? padL : padL + ((t - tMin) / (tMax - tMin)) * (W - padL - padR);
+  const y = (v) => padT + (1 - v / vMax) * (H - padT - padB);
+
+  let svg = "";
+  // gridlines + y labels
+  const yTicks = 4;
+  for (let i = 0; i <= yTicks; i++) {
+    const v = (vMax / yTicks) * i;
+    const yy = y(v);
+    svg += '<line x1="' + padL + '" y1="' + yy + '" x2="' + (W - padR) + '" y2="' + yy + '" stroke="var(--chart-grid)" stroke-width="1"/>';
+    svg += '<text x="' + (padL - 8) + '" y="' + (yy + 4) + '" text-anchor="end" font-size="11" fill="var(--text-soft)">' + fmtMoneyShort(v) + "</text>";
+  }
+  // x labels
+  const xTicks = Math.min(5, Math.max(2, series[0].points.length - 1));
+  for (let i = 0; i <= xTicks; i++) {
+    const t = tMin + ((tMax - tMin) / xTicks) * i;
+    const anchor = i === 0 ? "start" : i === xTicks ? "end" : "middle";
+    svg += '<text x="' + x(t) + '" y="' + (H - 8) + '" text-anchor="' + anchor + '" font-size="11" fill="var(--text-soft)">' + opts.xLabel(t) + "</text>";
+  }
+  // series paths
+  for (const s of series) {
+    const d = s.points.map((p, i) => (i ? "L" : "M") + x(p.t).toFixed(1) + " " + y(p.v).toFixed(1)).join(" ");
+    svg += '<path d="' + d + '" fill="none" stroke="' + s.color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+  }
+  // hover elements
+  svg += '<line id="ch-cross" x1="0" y1="' + padT + '" x2="0" y2="' + (H - padB) + '" stroke="var(--text-soft)" stroke-width="1" stroke-dasharray="3 3" visibility="hidden"/>';
+  series.forEach((s, i) => {
+    svg += '<circle id="ch-dot-' + i + '" r="4.5" fill="' + s.color + '" stroke="var(--card-bg)" stroke-width="2" visibility="hidden"/>';
+  });
+
+  const legend = series.length > 1
+    ? '<div class="chart-legend">' + series.map((s) =>
+        '<span class="li"><span class="dot" style="background:' + s.color + '"></span>' + escapeHTML(s.name) + "</span>").join("") + "</div>"
+    : "";
+
+  // data table (accessibility / "see the numbers")
+  const maxRows = 24;
+  const longest = series.reduce((a, b) => (a.points.length >= b.points.length ? a : b));
+  const step = Math.max(1, Math.ceil(longest.points.length / maxRows));
+  let tableRows = "";
+  for (let i = 0; i < longest.points.length; i += step) {
+    const t = longest.points[i].t;
+    tableRows += "<tr><td>" + opts.xLabel(t) + "</td>" + series.map((s) => {
+      const p = s.points.find((q) => q.t === t);
+      return "<td>" + (p ? fmtMoney(p.v) : "—") + "</td>";
+    }).join("") + "</tr>";
+  }
+  const table =
+    '<details class="data-table"><summary>' + escapeHTML(opts.tableCaption || "See the numbers") + "</summary>" +
+    '<div class="history-scroll"><table><thead><tr><th>When</th>' + series.map((s) => "<th>" + escapeHTML(s.name) + "</th>").join("") + "</tr></thead>" +
+    "<tbody>" + tableRows + "</tbody></table></div></details>";
+
+  container.innerHTML =
+    legend +
+    '<div class="chart-wrap"><svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Line chart">' + svg + "</svg>" +
+    '<div class="chart-tooltip"></div></div>' + table;
+
+  // hover behavior
+  const wrap = container.querySelector(".chart-wrap");
+  const svgEl = wrap.querySelector("svg");
+  const tip = wrap.querySelector(".chart-tooltip");
+  const cross = svgEl.querySelector("#ch-cross");
+  const ts = [...new Set(allT)].sort((a, b) => a - b);
+
+  svgEl.addEventListener("mousemove", (e) => {
+    const rect = svgEl.getBoundingClientRect();
+    const mx = ((e.clientX - rect.left) / rect.width) * W;
+    let best = ts[0], bd = Infinity;
+    for (const t of ts) { const d = Math.abs(x(t) - mx); if (d < bd) { bd = d; best = t; } }
+    cross.setAttribute("x1", x(best)); cross.setAttribute("x2", x(best));
+    cross.setAttribute("visibility", "visible");
+    let html = "<strong>" + opts.xLabel(best) + "</strong>";
+    series.forEach((s, i) => {
+      const dot = svgEl.querySelector("#ch-dot-" + i);
+      const p = s.points.find((q) => q.t === best);
+      if (p) {
+        dot.setAttribute("cx", x(p.t)); dot.setAttribute("cy", y(p.v));
+        dot.setAttribute("visibility", "visible");
+        html += "<br>" + escapeHTML(s.name) + ": " + fmtMoney(p.v);
+      } else {
+        dot.setAttribute("visibility", "hidden");
+      }
+    });
+    tip.innerHTML = html;
+    tip.style.display = "block";
+    const tipX = (x(best) / W) * rect.width;
+    tip.style.left = Math.min(tipX + 12, rect.width - tip.offsetWidth - 4) + "px";
+    tip.style.top = "10px";
+  });
+  svgEl.addEventListener("mouseleave", () => {
+    tip.style.display = "none";
+    cross.setAttribute("visibility", "hidden");
+    series.forEach((s, i) => svgEl.querySelector("#ch-dot-" + i).setAttribute("visibility", "hidden"));
+  });
 }
 
 /* =====================================================
@@ -714,7 +1515,7 @@ function escapeHTML(s) {
    ===================================================== */
 let editingCardId = null;
 
-(function populateDueDays() {
+(function populateSelects() {
   const sel = $("f-due-day");
   for (let d = 1; d <= 31; d++) {
     const opt = document.createElement("option");
@@ -722,6 +1523,13 @@ let editingCardId = null;
     opt.textContent = ordinal(d);
     sel.appendChild(opt);
   }
+  const feeSel = $("f-fee-month");
+  MONTH_NAMES.forEach((m, i) => {
+    const opt = document.createElement("option");
+    opt.value = i + 1;
+    opt.textContent = m;
+    feeSel.appendChild(opt);
+  });
 })();
 
 function ordinal(n) {
@@ -734,6 +1542,7 @@ function openCardModal(cardId) {
   const form = $("card-form");
   form.reset();
   $("card-form-error").classList.remove("show");
+  $("f-extras").open = false;
 
   if (cardId) {
     const card = state.cards.find((c) => c.id === cardId);
@@ -746,6 +1555,13 @@ function openCardModal(cardId) {
     $("f-apr").value = card.apr;
     $("f-due-day").value = card.dueDay;
     $("f-min").value = card.minPayment;
+    $("f-autopay").checked = card.autopay;
+    $("f-promo-rate").value = card.promoRate == null ? "" : card.promoRate;
+    $("f-promo-end").value = card.promoEnd || "";
+    $("f-fee").value = card.annualFee == null ? "" : card.annualFee;
+    $("f-fee-month").value = card.annualFeeMonth || "";
+    $("f-notes").value = card.notes || "";
+    if (card.promoRate != null || card.annualFee != null || card.notes) $("f-extras").open = true;
   } else {
     $("card-modal-title").textContent = "Add a card";
     $("f-due-day").value = 1;
@@ -769,22 +1585,45 @@ $("card-form").onsubmit = (e) => {
   const apr = parseFloat($("f-apr").value);
   const dueDay = parseInt($("f-due-day").value, 10);
   const minPayment = parseFloat($("f-min").value);
+  const autopay = $("f-autopay").checked;
+  const promoRateRaw = $("f-promo-rate").value.trim();
+  const promoRate = promoRateRaw === "" ? null : parseFloat(promoRateRaw);
+  const promoEnd = $("f-promo-end").value || null;
+  const feeRaw = $("f-fee").value.trim();
+  const annualFee = feeRaw === "" ? null : parseFloat(feeRaw);
+  const annualFeeMonth = $("f-fee-month").value ? parseInt($("f-fee-month").value, 10) : null;
+  const notes = $("f-notes").value.trim();
 
   const fail = (msg) => { errEl.textContent = msg; errEl.classList.add("show"); };
   if (!name) return fail("Give the card a nickname.");
-  if (last4 && !/^\d{4}$/.test(last4)) return fail("Last 4 digits must be exactly 4 numbers (or leave it blank).");
   if (last4 && /^\d{15,16}$/.test($("f-last4").value)) return fail("That looks like a full card number — please only enter the last 4 digits.");
+  if (last4 && !/^\d{4}$/.test(last4)) return fail("Last 4 digits must be exactly 4 numbers (or leave it blank).");
   if (!(limit > 0)) return fail("Credit limit must be greater than zero.");
   if (!(balance >= 0)) return fail("Balance can't be negative.");
   if (!(apr >= 0 && apr <= 100)) return fail("APR should be between 0 and 100.");
   if (!(minPayment >= 0)) return fail("Minimum payment can't be negative.");
+  if ((promoRate != null) !== (promoEnd != null)) return fail("For an intro APR, fill in both the rate and the end date (or clear both).");
+  if (promoRate != null && !(promoRate >= 0 && promoRate <= 100)) return fail("Intro APR should be between 0 and 100.");
+  if (annualFee != null && !(annualFee >= 0)) return fail("Annual fee can't be negative.");
+  if (annualFee != null && annualFee > 0 && !annualFeeMonth) return fail("Pick which month the annual fee is charged.");
+
+  const extras = { autopay, promoRate, promoEnd, annualFee, annualFeeMonth, notes };
 
   if (editingCardId) {
     const card = state.cards.find((c) => c.id === editingCardId);
-    Object.assign(card, { name, last4, limit, balance, apr, dueDay, minPayment });
+    const balanceChanged = card.balance !== balance;
+    Object.assign(card, { name, last4, limit, balance, apr, dueDay, minPayment }, extras);
+    if (balanceChanged) {
+      state.history.push({ id: uid(), cardId: card.id, type: "balance", note: "edited", amount: balance, balanceAfter: balance, date: todayISO(), ts: new Date().toISOString() });
+    }
     toast("Card updated");
   } else {
-    state.cards.push({ id: uid(), name, last4, limit, balance, apr, dueDay, minPayment, paidCycle: null });
+    const card = Object.assign({
+      id: uid(), name, last4, limit, balance, apr, dueDay, minPayment,
+      paidCycle: null, createdAt: todayISO(),
+    }, extras);
+    state.cards.push(card);
+    state.history.push({ id: uid(), cardId: card.id, type: "balance", note: "added", amount: balance, balanceAfter: balance, date: todayISO(), ts: new Date().toISOString() });
     toast("Card added — you're set!");
   }
   saveState();
@@ -793,15 +1632,20 @@ $("card-form").onsubmit = (e) => {
 };
 
 function deleteCard(cardId) {
-  const card = state.cards.find((c) => c.id === cardId);
-  if (!card) return;
+  const idx = state.cards.findIndex((c) => c.id === cardId);
+  if (idx === -1) return;
+  const card = state.cards[idx];
   if (!confirm('Delete "' + card.name + '"? Its payment history will stay in Recent activity.')) return;
-  // Keep the card's name on its history entries so history still makes sense.
   state.history.forEach((h) => { if (h.cardId === cardId) h.cardName = card.name; });
-  state.cards = state.cards.filter((c) => c.id !== cardId);
+  state.cards.splice(idx, 1);
   saveState();
   render();
-  toast("Card deleted");
+  toast('Deleted "' + card.name + '"', "Undo", () => {
+    state.cards.splice(Math.min(idx, state.cards.length), 0, card);
+    saveState();
+    render();
+    toast("Restored " + card.name);
+  });
 }
 
 /* =====================================================
@@ -850,23 +1694,150 @@ $("pay-form").onsubmit = (e) => {
   if (!date) return fail("Pick a date.");
   if (isNaN(amount)) return fail("Enter an amount.");
 
+  const wasCaughtUp = allCaughtUp();
+
   if (payTarget.mode === "payment") {
     if (!(amount > 0)) return fail("Payment must be more than zero.");
+    const st = cardStatus(card);
     card.balance = Math.max(0, card.balance - amount);
     if (payTarget.markPaid) {
-      card.paidCycle = cycleKeyFor(nextDueDate(card.dueDay));
+      card.paidCycle = st.payCycle;
+      if (st.overdue) state.stats.onTimeStreak = 0;
+      else state.stats.onTimeStreak++;
     }
-    state.history.push({ id: uid(), cardId: card.id, type: "payment", amount, date, ts: new Date().toISOString() });
+    state.history.push({ id: uid(), cardId: card.id, type: "payment", amount, balanceAfter: card.balance, date, ts: new Date().toISOString() });
     toast("Payment logged ✓ " + card.name + " is handled");
   } else {
     if (!(amount >= 0)) return fail("Balance can't be negative.");
     card.balance = amount;
-    state.history.push({ id: uid(), cardId: card.id, type: "balance", amount, date, ts: new Date().toISOString() });
+    state.history.push({ id: uid(), cardId: card.id, type: "balance", amount, balanceAfter: amount, date, ts: new Date().toISOString() });
     toast("Balance updated");
   }
   saveState();
   $("pay-modal").classList.remove("open");
   render();
+  if (!wasCaughtUp && allCaughtUp()) confetti();
+};
+
+/* =====================================================
+   Confetti (all caught up 🎉)
+   ===================================================== */
+function confetti() {
+  const canvas = document.createElement("canvas");
+  canvas.id = "confetti-canvas";
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext("2d");
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+  const colors = ["#3556d4", "#1d8a4e", "#c97a06", "#e34948", "#7b96ff", "#4cc98a"];
+  const parts = Array.from({ length: 110 }, () => ({
+    x: Math.random() * canvas.width,
+    y: -20 - Math.random() * canvas.height * 0.4,
+    w: 6 + Math.random() * 6,
+    h: 8 + Math.random() * 8,
+    vy: 2.4 + Math.random() * 3.2,
+    vx: -1.6 + Math.random() * 3.2,
+    rot: Math.random() * Math.PI,
+    vr: -0.12 + Math.random() * 0.24,
+    color: colors[Math.floor(Math.random() * colors.length)],
+  }));
+  const t0 = performance.now();
+  (function frame(t) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const p of parts) {
+      p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    }
+    if (t - t0 < 2400) requestAnimationFrame(frame);
+    else canvas.remove();
+  })(t0);
+}
+
+/* =====================================================
+   Calendar export (.ics)
+   ===================================================== */
+function icsEscape(s) {
+  return String(s).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+}
+
+function icsFold(line) {
+  // RFC 5545: lines longer than 75 octets should be folded
+  const out = [];
+  while (line.length > 70) { out.push(line.slice(0, 70)); line = " " + line.slice(70); }
+  out.push(line);
+  return out.join("\r\n");
+}
+
+function dateStamp(d) {
+  return d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0");
+}
+
+function buildICS() {
+  const L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//CCBGone//Card Tracker//EN", "CALSCALE:GREGORIAN", "X-WR-CALNAME:Credit card due dates"];
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+
+  const push = (line) => L.push(icsFold(line));
+
+  for (const card of state.cards) {
+    const due = nextDueDate(card.dueDay);
+    const rule = card.dueDay > 28
+      ? "RRULE:FREQ=MONTHLY;BYMONTHDAY=" + Array.from({ length: 32 - card.dueDay }, (_, i) => card.dueDay + i).join(",") + ";BYSETPOS=-1"
+      : "RRULE:FREQ=MONTHLY;BYMONTHDAY=" + card.dueDay;
+    L.push("BEGIN:VEVENT");
+    push("UID:ccbgone-due-" + card.id + "@local");
+    push("DTSTAMP:" + stamp);
+    push("DTSTART;VALUE=DATE:" + dateStamp(due));
+    push(rule);
+    push("SUMMARY:💳 " + icsEscape(card.name) + " payment due" + (card.autopay ? " (autopay)" : " (min " + fmtMoney(card.minPayment) + ")"));
+    push("DESCRIPTION:" + icsEscape("From CCBGone. " + (card.autopay ? "Autopay should cover this — glance at the app to confirm." : "Pay at least the minimum, then mark it paid in the app.")));
+    L.push("BEGIN:VALARM", "ACTION:DISPLAY", "TRIGGER:-P2D");
+    push("DESCRIPTION:" + icsEscape(card.name + " payment due in 2 days"));
+    L.push("END:VALARM", "BEGIN:VALARM", "ACTION:DISPLAY", "TRIGGER:PT9H");
+    push("DESCRIPTION:" + icsEscape(card.name + " payment is due today"));
+    L.push("END:VALARM", "END:VEVENT");
+
+    if (card.annualFee != null && card.annualFee > 0 && card.annualFeeMonth) {
+      const now = new Date();
+      let feeDate = new Date(now.getFullYear(), card.annualFeeMonth - 1, 1);
+      if (feeDate < new Date(now.getFullYear(), now.getMonth(), 1)) feeDate = new Date(now.getFullYear() + 1, card.annualFeeMonth - 1, 1);
+      L.push("BEGIN:VEVENT");
+      push("UID:ccbgone-fee-" + card.id + "@local");
+      push("DTSTAMP:" + stamp);
+      push("DTSTART;VALUE=DATE:" + dateStamp(feeDate));
+      push("RRULE:FREQ=YEARLY");
+      push("SUMMARY:💸 " + icsEscape(card.name) + " annual fee (" + fmtMoney(card.annualFee) + ") hits this month");
+      L.push("END:VEVENT");
+    }
+
+    if (card.promoRate != null && card.promoEnd && parseISODate(card.promoEnd) > new Date()) {
+      L.push("BEGIN:VEVENT");
+      push("UID:ccbgone-promo-" + card.id + "@local");
+      push("DTSTAMP:" + stamp);
+      push("DTSTART;VALUE=DATE:" + dateStamp(parseISODate(card.promoEnd)));
+      push("SUMMARY:⏳ " + icsEscape(card.name) + " intro APR ends — rate jumps to " + card.apr.toFixed(2) + "%");
+      L.push("BEGIN:VALARM", "ACTION:DISPLAY", "TRIGGER:-P14D");
+      push("DESCRIPTION:" + icsEscape(card.name + " intro APR ends in 2 weeks — try to clear the balance before then"));
+      L.push("END:VALARM", "END:VEVENT");
+    }
+  }
+  L.push("END:VCALENDAR");
+  return L.join("\r\n");
+}
+
+$("btn-calendar").onclick = () => {
+  if (state.cards.length === 0) { toast("Add a card first — then you can export its due dates"); return; }
+  const blob = new Blob([buildICS()], { type: "text/calendar" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "ccbgone-due-dates.ics";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("Calendar file saved — open it and your phone/computer adds the reminders");
 };
 
 /* =====================================================
@@ -890,8 +1861,7 @@ $("import-file").onchange = (e) => {
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      const data = JSON.parse(reader.result);
-      if (!Array.isArray(data.cards) || !Array.isArray(data.history)) throw new Error("Not a CCBGone backup file");
+      const data = migrate(JSON.parse(reader.result));
       if (state.cards.length > 0 &&
           !confirm("Restoring will replace your current data (" + state.cards.length + " card(s)). Continue?")) {
         return;
