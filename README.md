@@ -76,12 +76,30 @@ strategy:
 - **🏔 Avalanche**: highest interest rate first. Mathematically cheapest.
 - **☃️ Snowball**: smallest balance first. Fastest wins, best for motivation.
 
-You instantly get your **debt-free date**, **total interest you'll pay**, how
-much you **save vs. paying minimums only** (often the answer is "minimums
-would *never* pay this off"), the exact **payoff order**, and a chart of your
-plan vs. the minimums-only slog. It even tells you what the *other* strategy
-would cost, so you can choose with open eyes. The simulation respects 0% intro
-APR periods and their end dates.
+**Not sure which to pick? The app decides for you.** At the top of this tab is a
+**"Your debt, reviewed"** panel that analyzes *your actual cards* and gives a
+plain-language recommendation with the reasoning:
+
+- A snapshot of your situation — total debt, weighted-average interest rate,
+  how much interest you bleed each month, and your priciest card.
+- A clear verdict ("Avalanche — you save real money without waiting much
+  longer", or "Snowball — the early win is worth the small extra cost", or
+  "It's a tie — pick whichever you'll stick with"), each backed by *your*
+  numbers.
+- A side-by-side of both methods: total interest, months to debt-free, and how
+  soon you clear your first card under each.
+- A one-tap **"Use this method"** button that sets your plan to the winner.
+
+The recommendation is honest, not dogmatic: when Avalanche only saves a few
+dollars it says so and hands the win to Snowball's momentum; when a high-rate
+card is quietly draining you it says pay that first. It re-decides automatically
+as your balances change.
+
+Below that you still get your **debt-free date**, **total interest you'll
+pay**, how much you **save vs. paying minimums only** (often the answer is
+"minimums would *never* pay this off"), the exact **payoff order**, and a chart
+of your plan vs. the minimums-only slog. The simulation respects 0% intro APR
+periods and their end dates.
 
 ### 📈 Trends — is it working?
 

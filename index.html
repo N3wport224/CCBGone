@@ -246,6 +246,45 @@
   .plan-note.ok { background: var(--ok-soft); color: var(--ok); }
   .plan-note.info { background: var(--accent-soft); color: var(--accent); }
 
+  /* ---------- Method recommendation ---------- */
+  #reco-panel {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    margin-bottom: 16px;
+    border-left: 6px solid var(--accent);
+  }
+  #reco-panel.avalanche { border-left-color: var(--chart-s1); }
+  #reco-panel.snowball { border-left-color: var(--ok); }
+  #reco-panel.either { border-left-color: var(--warn); }
+  .reco-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .reco-eyebrow { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-soft); font-weight: 700; }
+  .reco-verdict { font-size: 1.25rem; font-weight: 800; margin: 2px 0 10px; }
+  .reco-why { list-style: none; margin: 10px 0 0; padding: 0; }
+  .reco-why li { position: relative; padding: 6px 0 6px 26px; color: var(--text); font-size: 0.94rem; }
+  .reco-why li::before { content: "→"; position: absolute; left: 4px; color: var(--accent); font-weight: 800; }
+  .reco-actions { margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .reco-applied { color: var(--ok); font-weight: 700; font-size: 0.9rem; }
+  .reco-snapshot {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px; margin: 4px 0 14px;
+    padding: 14px; background: var(--bg); border-radius: 10px;
+  }
+  .reco-snapshot .rs-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-soft); font-weight: 700; }
+  .reco-snapshot .rs-value { font-weight: 700; font-size: 1.02rem; margin-top: 2px; }
+  .reco-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .reco-compare .rc {
+    border: 1.5px solid var(--border); border-radius: 10px; padding: 12px 14px;
+  }
+  .reco-compare .rc.win { border-color: var(--ok); background: var(--ok-soft); }
+  .reco-compare .rc h5 { font-size: 0.95rem; margin-bottom: 6px; }
+  .reco-compare .rc .rc-line { font-size: 0.85rem; color: var(--text-soft); }
+  .reco-compare .rc .rc-line b { color: var(--text); }
+  body.privacy :is(.rs-value, .reco-why, .reco-compare, .reco-verdict) { filter: blur(7px); }
+  body.privacy :is(.rs-value, .reco-why, .reco-compare, .reco-verdict):hover { filter: none; }
+  @media (max-width: 640px) { .reco-compare { grid-template-columns: 1fr; } }
+
   .payoff-order { margin-top: 6px; }
   .payoff-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--border); }
   .payoff-row:first-child { border-top: none; }
@@ -715,6 +754,7 @@
     </div>
     <div id="plan-notes"></div>
   </div>
+  <div id="reco-panel" hidden></div>
   <div class="stats-row" id="plan-stats" hidden>
     <div class="stat">
       <div class="label">Debt-free date</div>
@@ -1707,7 +1747,176 @@ function monthToDate(m) {
   return new Date(now.getFullYear(), now.getMonth() + m, 1);
 }
 
+/* =====================================================
+   Avalanche vs Snowball — personalized recommendation
+   ===================================================== */
+function firstWinMonth(sim) {
+  const vals = Object.values(sim.payoffMonth);
+  return vals.length ? Math.min(...vals) : sim.months;
+}
+
+/* Analyze the user's actual cards and return a verdict object, or null. */
+function recommendStrategy() {
+  const debt = state.cards.filter((c) => c.balance > 0);
+  if (debt.length === 0) return null;
+
+  const totalDebt = debt.reduce((s, c) => s + c.balance, 0);
+  const monthlyInterestBleed = debt.reduce((s, c) => s + monthlyInterest(c), 0);
+  const wAvgApr = totalDebt > 0 ? debt.reduce((s, c) => s + effectiveApr(c) * c.balance, 0) / totalDebt : 0;
+  const byApr = [...debt].sort((a, b) => effectiveApr(b) - effectiveApr(a) || a.balance - b.balance);
+  const byBal = [...debt].sort((a, b) => a.balance - b.balance || effectiveApr(b) - effectiveApr(a));
+  const highestApr = byApr[0];
+  const smallest = byBal[0];
+  const snapshot = { totalDebt, monthlyInterestBleed, wAvgApr, highestApr, smallest, count: debt.length };
+
+  if (debt.length === 1) {
+    return { method: "either", single: true, snapshot,
+      verdict: "Just one card to focus on — no strategy needed",
+      why: ["With a single balance, both methods are identical: put every spare dollar on " + escapeHTML(debt[0].name) + " until it's gone."] };
+  }
+
+  const sameOrder = byApr.every((c, i) => c.id === byBal[i].id);
+  if (sameOrder) {
+    return { method: "either", sameOrder, snapshot,
+      verdict: "Both methods agree — you're in the clear",
+      why: [
+        "Your highest-interest card (" + escapeHTML(highestApr.name) + ", " + effectiveApr(highestApr).toFixed(2) + "%) is also your smallest balance.",
+        "So Avalanche and Snowball produce the exact same payoff order. Pick either — you get the cheapest AND the fastest-win path at once.",
+      ] };
+  }
+
+  const totalMins = debt.reduce((s, c) => s + Math.min(c.minPayment, c.balance), 0);
+  const budget = state.settings.budget;
+  const haveBudget = budget > 0 && budget >= totalMins;
+
+  if (haveBudget) {
+    const av = simulate(budget, "avalanche");
+    const sn = simulate(budget, "snowball");
+    if (av.done && sn.done) {
+      const interestSaved = Math.max(0, sn.totalInterest - av.totalInterest);
+      const monthsDiff = Math.max(0, sn.months - av.months);
+      const avFirst = firstWinMonth(av);
+      const snFirst = firstWinMonth(sn);
+      const firstWinSooner = Math.max(0, avFirst - snFirst);
+      const trivial = interestSaved < 25;
+      const modest = interestSaved < 150 || interestSaved < 0.08 * (av.totalInterest || 1);
+
+      const compare = {
+        avalanche: { interest: av.totalInterest, months: av.months, first: avFirst },
+        snowball: { interest: sn.totalInterest, months: sn.months, first: snFirst },
+      };
+      const winLabel = (m) => (m === 1 ? "1 month" : m + " months");
+
+      let method, verdict, why = [];
+      if (trivial) {
+        method = "snowball";
+        if (firstWinSooner >= 1) {
+          verdict = "Snowball — the motivation is basically free for you";
+          why.push("Avalanche would save only " + fmtMoney(interestSaved) + " over the whole payoff — too little to matter.");
+          why.push("Snowball clears your first card (" + escapeHTML(smallest.name) + ") in " + winLabel(snFirst) + ", giving you an early win with essentially no extra cost.");
+        } else {
+          verdict = "It's a tie — pick whichever you'll stick with";
+          why.push("For your cards the two methods are nearly identical: same first win (" + escapeHTML(smallest.name) + " in " + winLabel(snFirst) + ") and only " + fmtMoney(interestSaved) + " apart in total interest.");
+          why.push("So don't overthink it. Snowball's visible-wins mindset is a great default for staying consistent — but you truly can't go wrong here.");
+        }
+      } else if (firstWinSooner >= 2 && modest) {
+        method = "snowball";
+        verdict = "Snowball — the early win is worth the small extra cost";
+        why.push("Snowball knocks out " + escapeHTML(smallest.name) + " in " + winLabel(snFirst) + " — Avalanche would make you wait " + winLabel(avFirst) + " for your first cleared card.");
+        why.push("That early “done!” matters for staying on track. It costs about " + fmtMoney(interestSaved) + " more in total interest — a fair price for momentum.");
+        why.push("Prefer to optimize the money instead? Avalanche saves that " + fmtMoney(interestSaved) + (monthsDiff ? " and finishes " + winLabel(monthsDiff) + " sooner" : "") + ".");
+      } else {
+        method = "avalanche";
+        verdict = "Avalanche — you save real money without waiting much longer";
+        why.push("Avalanche saves " + fmtMoney(interestSaved) + " in interest" + (monthsDiff ? " and gets you debt-free " + winLabel(monthsDiff) + " sooner" : "") + " by hitting " + escapeHTML(highestApr.name) + " (" + effectiveApr(highestApr).toFixed(2) + "%) first.");
+        if (firstWinSooner <= 1) why.push("And you barely wait longer for your first win — " + winLabel(avFirst) + " vs Snowball's " + winLabel(snFirst) + ".");
+        else why.push("Snowball's first cleared card comes " + winLabel(firstWinSooner) + " sooner, but the " + fmtMoney(interestSaved) + " you'd give up outweighs it here.");
+      }
+      return { method, verdict, why, snapshot, compare, budgetBased: true };
+    }
+  }
+
+  // No workable budget yet — give a directional lean from card structure.
+  const aprSpread = effectiveApr(byApr[0]) - effectiveApr(byApr[byApr.length - 1]);
+  let method, verdict, why = [];
+  if (aprSpread < 4) {
+    method = "snowball";
+    verdict = "Snowball looks best — your rates are all similar";
+    why.push("Your cards' interest rates are close together (within " + aprSpread.toFixed(1) + " points), so Avalanche saves very little.");
+    why.push("Snowball's quick win on " + escapeHTML(smallest.name) + " (your smallest balance) gives you momentum at almost no extra cost.");
+  } else {
+    method = "avalanche";
+    verdict = "Avalanche looks best — you've got a high-rate card to kill";
+    why.push("Your rates range widely (a " + aprSpread.toFixed(1) + "-point gap). " + escapeHTML(highestApr.name) + " at " + effectiveApr(highestApr).toFixed(2) + "% is quietly costing you the most.");
+    why.push("Killing the highest rate first is the cheapest way out.");
+  }
+  why.push("💡 Enter a monthly budget above and I'll compare the two with your real dollar-and-month numbers.");
+  return { method, verdict, why, snapshot, budgetBased: false };
+}
+
+function renderRecommendation() {
+  const panel = $("reco-panel");
+  const rec = recommendStrategy();
+  if (!rec) { panel.hidden = true; return; }
+  panel.hidden = false;
+  panel.className = rec.method;
+
+  const s = rec.snapshot;
+  const snapshotHTML =
+    '<div class="reco-snapshot">' +
+      '<div><div class="rs-label">Total debt</div><div class="rs-value">' + fmtMoney(s.totalDebt) + "</div></div>" +
+      '<div><div class="rs-label">Avg interest rate</div><div class="rs-value">' + s.wAvgApr.toFixed(1) + "%</div></div>" +
+      '<div><div class="rs-label">Interest bleed / mo</div><div class="rs-value">' + fmtMoney(s.monthlyInterestBleed) + "</div></div>" +
+      '<div><div class="rs-label">Priciest card</div><div class="rs-value">' + escapeHTML(s.highestApr.name) + " · " + effectiveApr(s.highestApr).toFixed(1) + "%</div></div>" +
+    "</div>";
+
+  const label = rec.method === "avalanche" ? "🏔 Avalanche" : rec.method === "snowball" ? "☃️ Snowball" : "🤝 Either works";
+  let compareHTML = "";
+  if (rec.compare) {
+    const c = rec.compare;
+    const win = rec.method;
+    compareHTML =
+      '<div class="reco-compare">' +
+        '<div class="rc' + (win === "avalanche" ? " win" : "") + '"><h5>🏔 Avalanche' + (win === "avalanche" ? " ✓" : "") + "</h5>" +
+          '<div class="rc-line">Total interest: <b>' + fmtMoney(c.avalanche.interest) + "</b></div>" +
+          '<div class="rc-line">Debt-free in: <b>' + c.avalanche.months + " months</b></div>" +
+          '<div class="rc-line">First card gone: <b>month ' + c.avalanche.first + "</b></div></div>" +
+        '<div class="rc' + (win === "snowball" ? " win" : "") + '"><h5>☃️ Snowball' + (win === "snowball" ? " ✓" : "") + "</h5>" +
+          '<div class="rc-line">Total interest: <b>' + fmtMoney(c.snowball.interest) + "</b></div>" +
+          '<div class="rc-line">Debt-free in: <b>' + c.snowball.months + " months</b></div>" +
+          '<div class="rc-line">First card gone: <b>month ' + c.snowball.first + "</b></div></div>" +
+      "</div>";
+  }
+
+  const applied = state.settings.strategy === rec.method;
+  const actionHTML = rec.method === "either"
+    ? ""
+    : '<div class="reco-actions">' +
+        (applied
+          ? '<span class="reco-applied">✓ This is your current plan</span>'
+          : '<button class="btn-primary" id="reco-apply">Use ' + label + " for my plan</button>") +
+      "</div>";
+
+  panel.innerHTML =
+    '<div class="reco-head"><span class="reco-eyebrow">📋 Your debt, reviewed</span></div>' +
+    snapshotHTML +
+    '<div class="reco-eyebrow">Recommended for you</div>' +
+    '<div class="reco-verdict">' + rec.verdict + "</div>" +
+    '<ul class="reco-why">' + rec.why.map((w) => "<li>" + w + "</li>").join("") + "</ul>" +
+    compareHTML +
+    actionHTML;
+
+  const applyBtn = $("reco-apply");
+  if (applyBtn) applyBtn.onclick = () => {
+    state.settings.strategy = rec.method;
+    saveState();
+    renderPlanner();
+    toast("Plan set to " + label);
+  };
+}
+
 function renderPlanner() {
+  renderRecommendation();
   const debtCards = state.cards.filter((c) => c.balance > 0);
   const totalMins = debtCards.reduce((s, c) => s + Math.max(Math.min(c.minPayment, c.balance), 0), 0);
   const budgetInput = $("plan-budget");
@@ -1750,7 +1959,6 @@ function renderPlanner() {
 
   const plan = simulate(Math.max(budget, totalMins), strategy);
   const minOnly = simulate(0, "min-only");
-  const other = simulate(Math.max(budget, totalMins), strategy === "avalanche" ? "snowball" : "avalanche");
 
   if (plan.stalled || !plan.done) {
     noteHTML += '<div class="plan-note danger">⚠ At this amount the balances barely shrink (or grow) because of interest. Every extra dollar per month matters here — even $25 more changes the picture.</div>';
@@ -1779,15 +1987,8 @@ function renderPlanner() {
     $("plan-saved-hint").textContent = "and debt-free " + Math.max(monthsSaved, 0) + " months sooner";
   }
 
-  // Strategy comparison
-  const diff = other.totalInterest - plan.totalInterest;
-  if (plan.done && other.done && Math.abs(diff) >= 1) {
-    if (diff > 0) {
-      noteHTML += '<div class="plan-note ok">✓ Good choice — ' + strategy + " saves " + fmtMoneyShort(diff) + " vs " + (strategy === "avalanche" ? "snowball" : "avalanche") + " here.</div>";
-    } else {
-      noteHTML += '<div class="plan-note info">💡 Heads up: switching to ' + (strategy === "avalanche" ? "snowball" : "avalanche") + " would save " + fmtMoneyShort(-diff) + " in interest. (Sticking with what keeps you motivated is also a valid strategy.)</div>";
-    }
-  }
+  // (The full Avalanche-vs-Snowball comparison now lives in the recommendation
+  // panel above, so we don't duplicate a one-line comparison note here.)
   notes.innerHTML = noteHTML;
 
   // Payoff order
