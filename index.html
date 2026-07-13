@@ -477,6 +477,90 @@
   #progress-panel .progress-fill { height: 100%; border-radius: 999px; background: var(--ok); transition: width 0.5s ease; }
   .amount-charge { color: var(--warn); font-weight: 700; }
 
+  /* ---------- Welcome / demo / tips ---------- */
+  .welcome {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 34px 26px;
+    text-align: center;
+  }
+  .welcome h2 { font-size: 1.5rem; margin-bottom: 8px; }
+  .welcome p { color: var(--text-soft); max-width: 560px; margin: 0 auto 6px; }
+  .welcome ul { list-style: none; margin: 18px auto; max-width: 460px; text-align: left; }
+  .welcome li { padding: 6px 0; color: var(--text); }
+  .welcome-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+  .welcome .tiny { font-size: 0.8rem; color: var(--text-soft); margin-top: 16px; }
+
+  #demo-banner {
+    background: var(--warn-soft);
+    border: 1.5px solid var(--warn);
+    color: var(--warn);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-weight: 600;
+    font-size: 0.92rem;
+  }
+  #demo-banner button { background: var(--warn); color: #fff; padding: 7px 14px; }
+  #demo-banner > span { flex: 1 1 200px; min-width: 0; }
+
+  #tip-banner {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.92rem;
+  }
+  #tip-banner .tip-text { flex: 1; }
+  #tip-banner b { font-weight: 700; }
+  #tip-banner button { background: transparent; color: var(--accent); padding: 4px 8px; font-size: 1rem; flex-shrink: 0; }
+
+  .help-modal h4 { margin: 0 0 2px; }
+  .help-modal details { border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 10px; }
+  .help-modal summary { cursor: pointer; font-weight: 700; }
+  .help-modal details p, .help-modal details li { color: var(--text-soft); font-size: 0.92rem; margin-top: 8px; }
+  .help-modal details ol, .help-modal details ul { padding-left: 20px; margin-top: 6px; }
+  .help-modal details li { margin-top: 4px; }
+  .help-modal .glossary dt { font-weight: 700; margin-top: 10px; }
+  .help-modal .glossary dd { color: var(--text-soft); font-size: 0.92rem; margin-left: 0; }
+
+  details.where-find { margin: -8px 0 14px; }
+  details.where-find summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: 0.85rem; }
+  details.where-find p { font-size: 0.85rem; color: var(--text-soft); margin-top: 6px; }
+
+  /* ---------- Small screens ---------- */
+  @media (max-width: 640px) {
+    header { padding: 10px 12px; }
+    header h1 { font-size: 1.05rem; }
+    .header-actions { gap: 4px; }
+    .header-actions .bl { display: none; }   /* icon-only buttons on phones */
+    nav.tabs { overflow-x: auto; padding: 10px 12px 0; }
+    nav.tabs button { padding: 8px 12px; font-size: 0.85rem; white-space: nowrap; }
+    main { padding: 14px 12px; }
+    .modal { padding: 18px 14px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .btn-big { width: 100%; }
+    #focus-banner { padding: 14px 16px; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .stat { padding: 12px 14px; }
+    .stat .value { font-size: 1.25rem; }
+    .welcome-buttons { flex-direction: column; }
+    .welcome-buttons button { width: 100%; }
+    .payoff-row { flex-wrap: wrap; }
+    .payoff-when { white-space: normal; }
+    #demo-banner button { width: 100%; }
+  }
+
   /* ---------- Subscriptions ---------- */
   .import-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   .import-row select {
@@ -514,13 +598,14 @@
 <header>
   <h1>💳 CCB<span>Gone</span></h1>
   <div class="header-actions">
-    <button class="btn-quiet" id="btn-theme" title="Switch between automatic, light, and dark theme">🌓</button>
-    <button class="btn-quiet" id="btn-privacy" title="Blur all dollar amounts (for when someone's looking over your shoulder)">👁</button>
-    <button class="btn-quiet" id="btn-calendar" title="Download due-date reminders you can add to your phone or computer calendar">📅 Calendar</button>
-    <button class="btn-quiet" id="btn-export" title="Save a backup file of your data to your drive">⬇ Backup</button>
-    <button class="btn-quiet" id="btn-import" title="Restore data from a backup file">⬆ Restore</button>
+    <button class="btn-quiet" id="btn-help" aria-label="Help" title="How everything works, in plain words">❓ <span class="bl">Help</span></button>
+    <button class="btn-quiet" id="btn-theme" aria-label="Change theme" title="Switch between automatic, light, and dark theme">🌓</button>
+    <button class="btn-quiet" id="btn-privacy" aria-label="Hide dollar amounts" title="Blur all dollar amounts (for when someone's looking over your shoulder)">👁</button>
+    <button class="btn-quiet" id="btn-calendar" aria-label="Export calendar reminders" title="Download due-date reminders you can add to your phone or computer calendar">📅 <span class="bl">Calendar</span></button>
+    <button class="btn-quiet" id="btn-export" aria-label="Save backup" title="Save a backup file of your data to your drive">⬇ <span class="bl">Backup</span></button>
+    <button class="btn-quiet" id="btn-import" aria-label="Restore backup" title="Restore data from a backup file">⬆ <span class="bl">Restore</span></button>
     <input type="file" id="import-file" accept=".json,application/json" hidden>
-    <button class="btn-primary" id="btn-add-card">+ Add card</button>
+    <button class="btn-primary" id="btn-add-card" aria-label="Add card">➕<span class="bl"> Add card</span></button>
   </div>
 </header>
 
@@ -532,6 +617,10 @@
 </nav>
 
 <main>
+<div id="demo-banner" hidden>
+  <span>👀 You're exploring <b>sample data</b> — none of this is real.</span>
+  <button id="btn-exit-demo">Start fresh with my real cards</button>
+</div>
 <!-- ================= DASHBOARD ================= -->
 <section class="tab active" id="tab-dashboard">
   <div id="focus-banner" class="calm" hidden>
@@ -574,6 +663,11 @@
     <h3>🔁 Recurring charges expected soon</h3>
     <p class="panel-sub">Detected from your imported statements — money that's about to leave on its own.</p>
     <div id="upcoming-subs"></div>
+  </div>
+
+  <div id="tip-banner" hidden>
+    <span class="tip-text" id="tip-text"></span>
+    <button id="tip-dismiss" aria-label="Dismiss tip">✕</button>
   </div>
 
   <div id="progress-panel" hidden>
@@ -755,6 +849,10 @@
   <div class="modal">
     <h3 id="card-modal-title">Add a card</h3>
     <p class="modal-sub">Never enter your full card number — a nickname and the last 4 digits are all you need to track it.</p>
+    <details class="where-find">
+      <summary>🔎 Where do I find these numbers?</summary>
+      <p>On a paper or PDF statement: the first page has a "Payment Information" box with your <b>balance</b>, <b>minimum payment</b>, and <b>due date</b>. Your <b>APR</b> is near the end under "Interest Charges". In your banking app: tap the card, then "Statements" or "Card details". Close enough is fine — you can edit everything later.</p>
+    </details>
     <form id="card-form">
       <div class="form-grid">
         <div class="form-field full">
@@ -854,6 +952,65 @@
   </div>
 </div>
 
+<!-- Help modal -->
+<div class="modal-backdrop" id="help-modal">
+  <div class="modal help-modal">
+    <h3>❓ How this works</h3>
+    <p class="modal-sub">Short answers, no jargon. Tap a question.</p>
+
+    <details open>
+      <summary>What do I actually do each month?</summary>
+      <ol>
+        <li>Open the app. The colored banner at the top tells you the one thing to do next.</li>
+        <li>Pay that card in your banking app, then tap <b>✓ Mark it paid</b> here.</li>
+        <li>Repeat until the banner celebrates. That's it — about 2 minutes.</li>
+        <li>Every week or two, tap <b>Update balance</b> on each card so the numbers match reality.</li>
+      </ol>
+    </details>
+
+    <details>
+      <summary>What are the tabs?</summary>
+      <ul>
+        <li><b>📋 Dashboard</b> — what to pay next, and how every card is doing.</li>
+        <li><b>🎯 Payoff Plan</b> — type what you can afford monthly; it maps your whole way out of debt and tells every card what to pay.</li>
+        <li><b>📈 Trends</b> — your balance over time. The line going down is you winning.</li>
+        <li><b>🔁 Subscriptions</b> — import bank statements and it finds charges that repeat, and warns you before the next one hits.</li>
+      </ul>
+    </details>
+
+    <details>
+      <summary>How do I get reminders on my phone?</summary>
+      <p>Tap <b>📅 Calendar</b> at the top. It downloads a small file — open it, and your phone or computer calendar adds repeating reminders for every due date (alerts 2 days before and the morning of). Your calendar does the remembering, not you.</p>
+    </details>
+
+    <details>
+      <summary>What do these words mean?</summary>
+      <dl class="glossary">
+        <dt>APR</dt><dd>The interest rate the card charges when you carry a balance. Usually 20–30%. It's on your statement.</dd>
+        <dt>Minimum payment</dt><dd>The smallest amount you must pay each month to avoid late fees. Paying only this keeps you in debt a very long time.</dd>
+        <dt>Utilization</dt><dd>How much of your credit limit you're using. Under 30% is good for your credit score.</dd>
+        <dt>Avalanche</dt><dd>Pay extra on the highest-interest card first. Saves the most money.</dd>
+        <dt>Snowball</dt><dd>Pay extra on the smallest balance first. Quick wins keep you motivated. Both work — pick the one you'll stick with.</dd>
+        <dt>0% intro APR</dt><dd>A temporary no-interest deal. When it ends, the real rate kicks in — the app warns you before that happens.</dd>
+      </dl>
+    </details>
+
+    <details>
+      <summary>Is my data private? Can I lose it?</summary>
+      <p>Everything lives in this browser on this computer. Nothing is sent anywhere, ever — the app even works in airplane mode. Because of that, tap <b>⬇ Backup</b> once in a while: it saves a file to Downloads that <b>⬆ Restore</b> can load back (also how you move to a new computer). Clearing your browser's site data would erase the app's memory — the backup file is your safety net.</p>
+    </details>
+
+    <details>
+      <summary>I made a mistake — how do I fix it?</summary>
+      <p>Everything is editable. Tap <b>Edit</b> on a card to fix any number. Typed a wrong payment? Tap <b>Update balance</b> and set what the bank actually says — the app trusts you, not the other way around. Deleted a card by accident? Hit <b>Undo</b> on the message that pops up.</p>
+    </details>
+
+    <div class="modal-actions">
+      <button type="button" class="btn-primary" id="help-close">Got it</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -874,6 +1031,8 @@ function freshState() {
     stats: { onTimeStreak: 0, peakDebt: 0, lastMilestone: 0 },
     transactions: [],
     subIgnore: {},
+    tips: {},
+    demo: false,
   };
 }
 
@@ -885,6 +1044,9 @@ function migrate(data) {
   data.stats.peakDebt = Math.max(data.stats.peakDebt, data.cards.reduce((s, c) => s + (c.balance || 0), 0));
   data.transactions = Array.isArray(data.transactions) ? data.transactions : [];
   data.subIgnore = data.subIgnore && typeof data.subIgnore === "object" ? data.subIgnore : {};
+  data.tips = data.tips && typeof data.tips === "object" ? data.tips : {};
+  data.demo = !!data.demo;
+  if (data.settings.lastBackup === undefined) data.settings.lastBackup = null;
   const today = todayISO();
   for (const c of data.cards) {
     c.createdAt = c.createdAt || today;
@@ -1152,15 +1314,72 @@ function activeTab() {
    Rendering
    ===================================================== */
 function render() {
+  $("demo-banner").hidden = !state.demo;
   renderFocus();
   renderStats();
   renderProgress();
   renderUpcomingSubs();
+  renderTip();
   renderCards();
   renderHistory();
   if (activeTab() === "planner") renderPlanner();
   if (activeTab() === "trends") renderTrends();
   if (activeTab() === "subs") renderSubs();
+}
+
+/* =====================================================
+   Contextual tips — one at a time, dismissible
+   ===================================================== */
+const TIPS = [
+  {
+    key: "calendar", once: true,
+    when: () => state.cards.length > 0,
+    html: '📅 Put the due dates on your phone: tap <b>Calendar</b> up top, open the downloaded file, and your calendar reminds you before every payment — even when this app is closed.',
+  },
+  {
+    key: "budget", once: true,
+    when: () => state.cards.filter((c) => c.balance > 0).length >= 2 && !(state.settings.budget > 0),
+    html: '🎯 You have more than one card carrying a balance. Open <b>Payoff Plan</b>, type what you can afford per month, and every card will start telling you exactly what to pay.',
+  },
+  {
+    key: "stale", once: false,
+    when: () => {
+      if (state.cards.length === 0) return false;
+      const dates = state.history.map((h) => h.date).sort();
+      const last = dates[dates.length - 1];
+      return !last || daysUntil(parseISODate(last)) <= -21;
+    },
+    html: '🪞 It\'s been a few weeks since anything was logged. Balances drift as you spend — tap <b>Update balance</b> on each card so the picture stays honest (takes about 30 seconds).',
+  },
+  {
+    key: "backup", once: false,
+    when: () => {
+      if (state.history.length < 5) return false;
+      const lb = state.settings.lastBackup;
+      return !lb || daysUntil(parseISODate(lb)) <= -30;
+    },
+    html: '💾 Tap <b>Backup</b> up top — it saves your data as a file in Downloads, so clearing the browser can never take your records with it.',
+  },
+];
+
+function renderTip() {
+  const banner = $("tip-banner");
+  if (state.demo) { banner.hidden = true; return; } // don't coach on fake data
+  const now = new Date();
+  const tip = TIPS.find((t) => {
+    const d = state.tips[t.key];
+    if (d && t.once) return false;
+    if (d && !t.once && (now - parseISODate(d)) < 30 * 86400000) return false;
+    return t.when();
+  });
+  if (!tip) { banner.hidden = true; return; }
+  banner.hidden = false;
+  $("tip-text").innerHTML = tip.html;
+  $("tip-dismiss").onclick = () => {
+    state.tips[tip.key] = todayISO();
+    saveState();
+    renderTip();
+  };
 }
 
 function renderProgress() {
@@ -1286,10 +1505,22 @@ function renderCards() {
 
   if (state.cards.length === 0) {
     list.innerHTML =
-      '<div class="empty-state">' +
-      "<p>No cards yet. Add your first card — it takes about a minute,<br>and you only have to do it once.</p>" +
-      '<button class="btn-primary btn-big" id="empty-add">+ Add your first card</button></div>';
+      '<div class="welcome">' +
+        "<h2>Welcome 👋</h2>" +
+        "<p>CCBGone keeps your credit cards from sneaking up on you. It answers one question at a glance: <b>what do I need to pay next?</b></p>" +
+        "<ul>" +
+          "<li>🔒 Everything stays on this computer. No account, no internet, no one else.</li>" +
+          "<li>⏱ Enter each card once (about a minute) — then it's ~2 minutes a month.</li>" +
+          "<li>📅 It can put reminders on your phone's calendar so you never miss a due date.</li>" +
+        "</ul>" +
+        '<div class="welcome-buttons">' +
+          '<button class="btn-primary btn-big" id="empty-add">➕ Add my first card</button>' +
+          '<button class="btn-ghost btn-big" id="btn-demo">👀 Explore with sample data first</button>' +
+        "</div>" +
+        '<p class="tiny">Sample data fills the app with made-up cards so you can click around safely. One tap wipes it when you\'re ready to add your real ones.</p>' +
+      "</div>";
     $("empty-add").onclick = () => openCardModal(null);
+    $("btn-demo").onclick = loadDemo;
     $("cards-heading").textContent = "Your cards";
     return;
   }
@@ -2093,6 +2324,69 @@ function confetti() {
 }
 
 /* =====================================================
+   Demo / sample data
+   ===================================================== */
+function loadDemo() {
+  const now = new Date();
+  const dISO = (n) => {
+    const d = new Date(now.getTime() - n * 86400000);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  };
+  const dayOf = (offset) => new Date(now.getTime() + offset * 86400000).getDate();
+
+  const cards = [
+    { id: "demo1", name: "Everyday Card", last4: "4821", limit: 6000, balance: 2350, apr: 24.99, dueDay: dayOf(5), minPayment: 55, paidCycle: null, createdAt: dISO(120), autopay: false, promoRate: null, promoEnd: null, annualFee: null, annualFeeMonth: null, notes: "" },
+    { id: "demo2", name: "Store Card", last4: "0072", limit: 2500, balance: 780, apr: 29.99, dueDay: dayOf(2), minPayment: 30, paidCycle: null, createdAt: dISO(120), autopay: false, promoRate: null, promoEnd: null, annualFee: null, annualFeeMonth: null, notes: "the TV lives on this card 📺" },
+    { id: "demo3", name: "Travel Card", last4: "9915", limit: 8000, balance: 1450, apr: 21.49, dueDay: dayOf(17), minPayment: 40, paidCycle: null, createdAt: dISO(120), autopay: true, promoRate: 0, promoEnd: dISO(-40), annualFee: 95, annualFeeMonth: ((now.getMonth() + 1) % 12) + 1, notes: "" },
+  ];
+  const H = (cardId, type, amount, balanceAfter, nAgo, note) =>
+    ({ id: uid(), cardId, type, note, amount, balanceAfter, date: dISO(nAgo), ts: "demo" + nAgo });
+  const history = [
+    H("demo1", "balance", 3600, 3600, 120, "added"), H("demo2", "balance", 1400, 1400, 120, "added"), H("demo3", "balance", 2100, 2100, 120, "added"),
+    H("demo1", "payment", 450, 3150, 96), H("demo2", "payment", 220, 1180, 95), H("demo3", "payment", 250, 1850, 92),
+    H("demo1", "charge", 120, 3270, 80),
+    H("demo1", "payment", 500, 2770, 64), H("demo2", "payment", 200, 980, 63), H("demo3", "payment", 200, 1650, 61),
+    H("demo2", "charge", 60, 1040, 45),
+    H("demo1", "payment", 420, 2350, 33), H("demo2", "payment", 260, 780, 32), H("demo3", "payment", 200, 1450, 30),
+  ];
+  const T = (nAgo, desc, amount) => ({ id: uid(), date: dISO(nAgo), desc, amount, cardId: "demo1" });
+  const transactions = [
+    ...[102, 72, 42, 12].map((n) => T(n, "NETFLIX.COM 866-579-7172", 15.49)),
+    ...[115, 85, 55, 25].map((n) => T(n, "SPOTIFY USA 877-778-1161", 11.99)),
+    ...[74, 43, 13].map((n) => T(n, "PLANET FIT CLUB FEES", 24.99)),
+    T(370, "ICLOUD STORAGE APPLE.COM", 2.99), T(5, "ICLOUD STORAGE APPLE.COM", 2.99),
+    T(88, "WHOLEFDS #10236", 84.12), T(59, "WHOLEFDS #10236", 31.55), T(31, "WHOLEFDS #10236", 129.03),
+    T(21, "SHELL OIL 5744231", 52.40), T(9, "AMZN MKTP US", 27.84), T(3, "CHIPOTLE 2201", 14.35),
+  ];
+
+  state = Object.assign(freshState(), {
+    demo: true,
+    cards, history, transactions,
+    settings: { budget: 500, strategy: "avalanche", theme: state.settings.theme, privacy: false, lastBackup: null },
+    stats: { onTimeStreak: 3, peakDebt: 7100, lastMilestone: 25 },
+  });
+  saveState();
+  render();
+  toast("Sample data loaded — click around, nothing here is real!");
+}
+
+$("btn-exit-demo").onclick = () => {
+  if (!confirm("Clear the sample data and start fresh with your real cards?")) return;
+  const theme = state.settings.theme;
+  state = freshState();
+  state.settings.theme = theme;
+  saveState();
+  render();
+  toast("Fresh start — add your first real card whenever you're ready");
+};
+
+/* =====================================================
+   Help modal
+   ===================================================== */
+$("btn-help").onclick = () => $("help-modal").classList.add("open");
+$("help-close").onclick = () => $("help-modal").classList.remove("open");
+
+/* =====================================================
    Statement import: CSV + pasted text parsing
    ===================================================== */
 function parseCSVText(text) {
@@ -2593,6 +2887,9 @@ $("btn-export").onclick = () => {
   a.download = "ccbgone-backup-" + todayISO() + ".json";
   a.click();
   URL.revokeObjectURL(a.href);
+  state.settings.lastBackup = todayISO();
+  saveState();
+  renderTip();
   toast("Backup saved to your Downloads folder");
 };
 
@@ -2647,7 +2944,7 @@ $("import-file").onchange = (e) => {
    ===================================================== */
 $("btn-toggle-history").onclick = () => { showAllHistory = !showAllHistory; renderHistory(); };
 
-for (const id of ["card-modal", "pay-modal"]) {
+for (const id of ["card-modal", "pay-modal", "help-modal"]) {
   $(id).addEventListener("mousedown", (e) => {
     if (e.target === $(id)) $(id).classList.remove("open");
   });
@@ -2656,6 +2953,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     $("card-modal").classList.remove("open");
     $("pay-modal").classList.remove("open");
+    $("help-modal").classList.remove("open");
   }
 });
 

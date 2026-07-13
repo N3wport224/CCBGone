@@ -14,12 +14,23 @@ a shrinking chart).
 1. Download `index.html` from this repository (or clone the repo).
 2. Save it anywhere on your computer — Desktop, Documents, wherever.
 3. Double-click it. It opens in your web browser. That's the whole app.
-4. Click **+ Add card** and enter each card once: nickname, last 4 digits
-   (optional), credit limit, current balance, APR, payment due day, and minimum
-   payment. Under **More options** you can also record a 0% intro APR, an
-   annual fee, autopay, and notes.
+4. On first open you get a **Welcome screen** with two choices:
+   - **👀 Explore with sample data first** — fills the app with made-up cards
+     so you can click every feature safely before entering anything real. One
+     tap wipes it when you're ready.
+   - **➕ Add my first card** — enter each card once: nickname, last 4 digits
+     (optional), credit limit, current balance, APR, payment due day, and
+     minimum payment. Not sure where to find those? The form has a **"🔎 Where
+     do I find these numbers?"** helper. Under **More options** you can also
+     record a 0% intro APR, an annual fee, autopay, and notes.
 
-**Tip:** Bookmark the page or pin the tab so it's always one click away.
+**Tip:** Bookmark the page or pin the tab so it's always one click away. Works
+great on your phone, too — the layout adapts to a single column.
+
+**Stuck?** Tap **❓ Help** in the header anytime for plain-language answers: the
+monthly routine, what each tab does, how to get phone reminders, a glossary
+(what *is* APR?), and how to fix mistakes. The app also drops in one gentle,
+dismissible tip at a time as you go — never a wall of instructions.
 
 > ⚠️ **Never enter your full card number.** The app doesn't need it and will
 > reject it if you try. A nickname + last 4 digits is all it takes to track a card.
