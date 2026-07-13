@@ -559,6 +559,16 @@
     font-size: 0.92rem;
   }
   #demo-banner button { background: var(--warn); color: #fff; padding: 7px 14px; }
+  #save-warning {
+    background: var(--danger-soft);
+    border: 1.5px solid var(--danger);
+    color: var(--danger);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
   #demo-banner > span { flex: 1 1 200px; min-width: 0; }
 
   #tip-banner {
@@ -689,6 +699,9 @@
 </nav>
 
 <main>
+<div id="save-warning" role="alert" hidden>
+  <span>⚠️ <b>Your changes aren't being saved.</b> This browser is blocking storage (often private/incognito mode). The app still works right now, but everything will vanish when you close this tab. Tap <b>⬇ Backup</b> to save a file before you leave.</span>
+</div>
 <div id="demo-banner" hidden>
   <span>👀 You're exploring <b>sample data</b> — none of this is real.</span>
   <button id="btn-exit-demo">Start fresh with my real cards</button>
@@ -931,7 +944,7 @@
 
 <!-- Add / Edit card modal -->
 <div class="modal-backdrop" id="card-modal">
-  <div class="modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="card-modal-title">
     <h3 id="card-modal-title">Add a card</h3>
     <p class="modal-sub">Never enter your full card number — a nickname and the last 4 digits are all you need to track it.</p>
     <details class="where-find">
@@ -1014,7 +1027,7 @@
 
 <!-- Log payment / update balance modal -->
 <div class="modal-backdrop" id="pay-modal">
-  <div class="modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pay-modal-title">
     <h3 id="pay-modal-title">Log a payment</h3>
     <p class="modal-sub" id="pay-modal-sub"></p>
     <form id="pay-form">
@@ -1039,8 +1052,8 @@
 
 <!-- Help modal -->
 <div class="modal-backdrop" id="help-modal">
-  <div class="modal help-modal">
-    <h3>❓ How this works</h3>
+  <div class="modal help-modal" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
+    <h3 id="help-modal-title">❓ How this works</h3>
     <p class="modal-sub">Short answers, no jargon. Tap a question.</p>
 
     <details open>
@@ -1158,11 +1171,85 @@ function loadState() {
   }
 }
 
+let saveFailed = false;
+
 function saveState() {
   const total = state.cards.reduce((s, c) => s + c.balance, 0);
   if (total > state.stats.peakDebt) state.stats.peakDebt = total;
-  localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    if (saveFailed) { saveFailed = false; updateSaveWarning(); }
+  } catch (e) {
+    // Private mode, quota exceeded, or storage blocked: the app keeps working
+    // in memory, but we must warn the user so they can export a backup.
+    saveFailed = true;
+    updateSaveWarning();
+    console.error("Could not save data:", e);
+  }
 }
+
+function updateSaveWarning() {
+  const el = document.getElementById("save-warning");
+  if (el) el.hidden = !saveFailed;
+}
+
+/* ---- Universal undo: snapshot the whole state, restore it on demand ---- */
+function snapshot() {
+  return JSON.stringify(state);
+}
+
+function offerUndo(prevJSON, msg) {
+  toast(msg, "Undo", () => {
+    try { state = JSON.parse(prevJSON); } catch (e) { return; }
+    saveState();
+    applyTheme();
+    applyPrivacy();
+    render();
+    toast("Undone ✓");
+  });
+}
+
+/* ---- Accessible modal open/close: focus trap + restore focus ---- */
+let modalReturnFocus = null;
+
+function focusables(modal) {
+  return [...modal.querySelectorAll('button, [href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])')]
+    .filter((el) => !el.disabled && el.offsetParent !== null);
+}
+
+function openModal(id, focusId) {
+  modalReturnFocus = document.activeElement;
+  const modal = document.getElementById(id);
+  modal.classList.add("open");
+  const target = focusId ? document.getElementById(focusId) : focusables(modal)[0];
+  if (target) target.focus();
+}
+
+function closeModal(id) {
+  const modal = document.getElementById(id);
+  if (!modal.classList.contains("open")) return;
+  modal.classList.remove("open");
+  if (modalReturnFocus && typeof modalReturnFocus.focus === "function") {
+    modalReturnFocus.focus();
+  }
+  modalReturnFocus = null;
+}
+
+function openModalEl() {
+  return document.querySelector(".modal-backdrop.open");
+}
+
+// Trap Tab within the open modal.
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Tab") return;
+  const modal = openModalEl();
+  if (!modal) return;
+  const items = focusables(modal);
+  if (items.length === 0) return;
+  const first = items[0], last = items[items.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
 
 /* % of peak debt paid down — the number the progress bar and milestones run on. */
 function paydownProgress() {
@@ -2403,12 +2490,11 @@ function openCardModal(cardId) {
     $("card-modal-title").textContent = "Add a card";
     $("f-due-day").value = 1;
   }
-  $("card-modal").classList.add("open");
-  $("f-name").focus();
+  openModal("card-modal", "f-name");
 }
 
 $("btn-add-card").onclick = () => openCardModal(null);
-$("card-cancel").onclick = () => $("card-modal").classList.remove("open");
+$("card-cancel").onclick = () => closeModal("card-modal");
 
 $("card-form").onsubmit = (e) => {
   e.preventDefault();
@@ -2445,6 +2531,8 @@ $("card-form").onsubmit = (e) => {
   if (annualFee != null && annualFee > 0 && !annualFeeMonth) return fail("Pick which month the annual fee is charged.");
 
   const extras = { autopay, promoRate, promoEnd, annualFee, annualFeeMonth, notes };
+  const before = snapshot();
+  let undoable = false, msg;
 
   if (editingCardId) {
     const card = state.cards.find((c) => c.id === editingCardId);
@@ -2453,7 +2541,8 @@ $("card-form").onsubmit = (e) => {
     if (balanceChanged) {
       state.history.push({ id: uid(), cardId: card.id, type: "balance", note: "edited", amount: balance, balanceAfter: balance, date: todayISO(), ts: new Date().toISOString() });
     }
-    toast("Card updated");
+    msg = "Card updated";
+    undoable = true;
   } else {
     const card = Object.assign({
       id: uid(), name, last4, limit, balance, apr, dueDay, minPayment,
@@ -2461,11 +2550,12 @@ $("card-form").onsubmit = (e) => {
     }, extras);
     state.cards.push(card);
     state.history.push({ id: uid(), cardId: card.id, type: "balance", note: "added", amount: balance, balanceAfter: balance, date: todayISO(), ts: new Date().toISOString() });
-    toast("Card added — you're set!");
+    msg = "Card added — you're set!";
   }
   saveState();
-  $("card-modal").classList.remove("open");
+  closeModal("card-modal");
   render();
+  if (undoable) offerUndo(before, msg); else toast(msg);
 };
 
 function deleteCard(cardId) {
@@ -2521,12 +2611,11 @@ function openPayModal(cardId, mode, markPaid) {
     $("p-amount").value = card.balance;
     $("p-amount").min = "0";
   }
-  $("pay-modal").classList.add("open");
-  $("p-amount").focus();
+  openModal("pay-modal", "p-amount");
   $("p-amount").select();
 }
 
-$("pay-cancel").onclick = () => $("pay-modal").classList.remove("open");
+$("pay-cancel").onclick = () => closeModal("pay-modal");
 
 $("pay-form").onsubmit = (e) => {
   e.preventDefault();
@@ -2541,8 +2630,10 @@ $("pay-form").onsubmit = (e) => {
   if (!date) return fail("Pick a date.");
   if (isNaN(amount)) return fail("Enter an amount.");
 
+  const before = snapshot(); // capture full state before mutating, for Undo
   const wasCaughtUp = allCaughtUp();
   const progBefore = paydownProgress();
+  let msg;
 
   if (payTarget.mode === "payment") {
     if (!(amount > 0)) return fail("Payment must be more than zero.");
@@ -2554,26 +2645,29 @@ $("pay-form").onsubmit = (e) => {
       else state.stats.onTimeStreak++;
     }
     state.history.push({ id: uid(), cardId: card.id, type: "payment", amount, balanceAfter: card.balance, date, ts: new Date().toISOString() });
-    toast("Payment logged ✓ " + card.name + " is handled");
+    msg = "Payment logged ✓ " + card.name + " is handled";
   } else if (payTarget.mode === "charge") {
     if (!(amount > 0)) return fail("Charge must be more than zero.");
     card.balance += amount;
     state.history.push({ id: uid(), cardId: card.id, type: "charge", amount, balanceAfter: card.balance, date, ts: new Date().toISOString() });
-    toast("Charge logged — balance is up to date");
+    msg = "Charge logged — balance is up to date";
   } else {
     if (!(amount >= 0)) return fail("Balance can't be negative.");
     card.balance = amount;
     state.history.push({ id: uid(), cardId: card.id, type: "balance", amount, balanceAfter: amount, date, ts: new Date().toISOString() });
-    toast("Balance updated");
+    msg = "Balance updated";
   }
   saveState();
-  $("pay-modal").classList.remove("open");
+  closeModal("pay-modal");
   render();
 
-  // Celebrations: milestones first (bigger deal), then caught-up confetti.
+  // Celebrate a milestone or a caught-up moment with confetti — but ALWAYS keep
+  // Undo available (a mistyped amount must stay recoverable even if it happened
+  // to cross a milestone). The milestone text becomes the toast message.
   const milestone = checkMilestone(progBefore, paydownProgress());
-  if (milestone) { confetti(); toast(milestone); }
+  if (milestone) confetti();
   else if (!wasCaughtUp && allCaughtUp()) confetti();
+  offerUndo(before, milestone || msg);
 };
 
 const MILESTONE_MSGS = {
@@ -2695,8 +2789,8 @@ $("btn-exit-demo").onclick = () => {
 /* =====================================================
    Help modal
    ===================================================== */
-$("btn-help").onclick = () => $("help-modal").classList.add("open");
-$("help-close").onclick = () => $("help-modal").classList.remove("open");
+$("btn-help").onclick = () => openModal("help-modal");
+$("help-close").onclick = () => closeModal("help-modal");
 
 /* =====================================================
    Statement import: CSV + pasted text parsing
@@ -3326,16 +3420,25 @@ $("btn-toggle-history").onclick = () => { showAllHistory = !showAllHistory; rend
 
 for (const id of ["card-modal", "pay-modal", "help-modal"]) {
   $(id).addEventListener("mousedown", (e) => {
-    if (e.target === $(id)) $(id).classList.remove("open");
+    if (e.target === $(id)) closeModal(id);
   });
 }
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
-    $("card-modal").classList.remove("open");
-    $("pay-modal").classList.remove("open");
-    $("help-modal").classList.remove("open");
+    const open = openModalEl();
+    if (open) closeModal(open.id);
   }
 });
+
+// Surface a storage-blocked state immediately (private mode, etc.).
+try {
+  const k = "ccbgone.__probe";
+  localStorage.setItem(k, "1");
+  localStorage.removeItem(k);
+} catch (e) {
+  saveFailed = true;
+}
+updateSaveWarning();
 
 applyTheme();
 applyPrivacy();

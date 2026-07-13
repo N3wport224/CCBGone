@@ -63,8 +63,11 @@ dismissible tip at a time as you go — never a wall of instructions.
 - **＋ Charge** lets you log new spending in two taps, so balances (and the
   Trends chart) stay honest between statements.
 - **Recent activity** logs every payment, charge, and balance update, and can
-  be **exported as CSV** for spreadsheets. Deleting a card offers **Undo** for
-  a few seconds, so a slip of the finger costs nothing.
+  be **exported as CSV** for spreadsheets.
+- **Everything is undoable.** Log the wrong payment, mistype a balance, fumble a
+  card edit, or delete a card by accident — every one of these pops an **Undo**
+  in the confirmation message that puts things back exactly as they were. Nothing
+  you do in this app is scary or permanent.
 - Pay everything due this week and you get confetti. You earned it.
   (Respects your system's reduced-motion setting.)
 
@@ -177,3 +180,6 @@ Your calendar does the remembering. Re-export whenever you add or change cards.
   computer or browser. Old backups from earlier versions restore fine.
 - Clearing your browser's site data will erase the tracker's data — another
   good reason to keep a backup file.
+- If your browser ever blocks saving (private/incognito mode, or storage full),
+  the app **won't fail silently** — a red banner appears telling you your changes
+  aren't being saved and to export a backup before you close the tab.
